@@ -59,21 +59,21 @@ typedef struct dictEntry {
 } dictEntry;
 
 typedef struct dictType {
-    unsigned int (*hashFunction)(const void *key);
-    void *(*keyDup)(void *privdata, const void *key);
-    void *(*valDup)(void *privdata, const void *obj);
-    int (*keyCompare)(void *privdata, const void *key1, const void *key2);
-    void (*keyDestructor)(void *privdata, void *key);
-    void (*valDestructor)(void *privdata, void *obj);
+    unsigned int (*hashFunction)(const void *key);//当前哈希表的哈希函数
+    void *(*keyDup)(void *privdata, const void *key);//key的拷贝函数
+    void *(*valDup)(void *privdata, const void *obj);//value的拷贝看书
+    int (*keyCompare)(void *privdata, const void *key1, const void *key2);//key的比较函数
+    void (*keyDestructor)(void *privdata, void *key);//key的释放函数
+    void (*valDestructor)(void *privdata, void *obj);//val的释放函数
 } dictType;
 
 /* This is our hash table structure. Every dictionary has two of this as we
  * implement incremental rehashing, for the old to the new table. */
 typedef struct dictht {
-    dictEntry **table;//哈希表数组
-    PORT_ULONG size;//哈希表的大小
+    dictEntry **table;//哈希表数组  每个元素里面实际上存储一个链表（解决冲突）
+    PORT_ULONG size;//哈希表的大小 也就是slot的个数
     PORT_ULONG sizemask;//哈希表的大小减1
-    PORT_ULONG used;//
+    PORT_ULONG used;//代表当前哈希表中已经有多少个元素了  d->ht[0].used/d->ht[0].size  其实就是负载因子了
 } dictht;
 
 typedef struct dict {
