@@ -937,7 +937,7 @@ PORT_ULONG dictScan(dict *d,
 /* ------------------------- private functions ------------------------------ */
 
 /* Expand the hash table if needed */
-static int _dictExpandIfNeeded(dict *d)
+static int _dictExpandIfNeeded(dict *d)//如果需要的话扩大字典
 {
     /* Incremental rehashing already in progress. Return. */
     if (dictIsRehashing(d)) return DICT_OK;
@@ -977,7 +977,7 @@ static PORT_ULONG _dictNextPower(PORT_ULONG size)//下一个扩大的slot数目
  *
  * Note that if we are in the process of rehashing the hash table, the
  * index is always returned in the context of the second (new) hash table. */
-static int _dictKeyIndex(dict *d, const void *key)
+static int _dictKeyIndex(dict *d, const void *key)//获取简要插入哈希表的slot位置，如果已经存在了，那么返回-1
 {
     unsigned int h, idx, table;
     dictEntry *he;
@@ -1001,7 +1001,7 @@ static int _dictKeyIndex(dict *d, const void *key)
     return idx;
 }
 
-void dictEmpty(dict *d, void(callback)(void*)) {
+void dictEmpty(dict *d, void(callback)(void*)) {//清空整个哈希表
     _dictClear(d,&d->ht[0],callback);
     _dictClear(d,&d->ht[1],callback);
     d->rehashidx = -1;

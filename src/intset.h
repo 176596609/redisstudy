@@ -32,19 +32,19 @@
 #define __INTSET_H
 #include <stdint.h>
 
-typedef struct intset {
+typedef struct intset {//集合的亮点是 尽量节省内存 然后是排序的，查找的时候二分查找比加快。 但是代价是插入删除比较费劲
     uint32_t encoding;
     uint32_t length;
     int8_t contents[];
 } intset;
 
-intset *intsetNew(void);
-intset *intsetAdd(intset *is, int64_t value, uint8_t *success);
-intset *intsetRemove(intset *is, int64_t value, int *success);
-uint8_t intsetFind(intset *is, int64_t value);
-int64_t intsetRandom(intset *is);
-uint8_t intsetGet(intset *is, uint32_t pos, int64_t *value);
-uint32_t intsetLen(intset *is);
-size_t intsetBlobLen(intset *is);
+intset *intsetNew(void);//生成一个整数set
+intset *intsetAdd(intset *is, int64_t value, uint8_t *success);//集合中增加一个值
+intset *intsetRemove(intset *is, int64_t value, int *success);//集合中删除一个值
+uint8_t intsetFind(intset *is, int64_t value);//查找元素  因为查找都是二分 所以时间复杂度都是 O(N)
+int64_t intsetRandom(intset *is);//获取集合中的一个随机值
+uint8_t intsetGet(intset *is, uint32_t pos, int64_t *value);//获取集合中一个固定位置的值
+uint32_t intsetLen(intset *is);//获取集合的长度
+size_t intsetBlobLen(intset *is);//获取集合的整个结构体加content的大小
 
 #endif // __INTSET_H
