@@ -610,20 +610,20 @@ void sdsrange(sds s, int start, int end) {
     size_t newlen, len = sdslen(s);
 
     if (len == 0) return;
-    if (start < 0) {
+    if (start < 0) {//如果start<0 那么倒着找第一个位置 如果start太小了 那么直接设置为0
         start = (int)len+start;                                                 WIN_PORT_FIX /* cast (int) */
         if (start < 0) start = 0;
     }
-    if (end < 0) {
+    if (end < 0) {//如果end<0 那么倒着找 如果end太小了  那么直接设置为0
         end = (int)len+end;                                                     WIN_PORT_FIX /* cast (int) */
         if (end < 0) end = 0;
     }
-    newlen = (start > end) ? 0 : (end-start)+1;
-    if (newlen != 0) {
-        if (start >= (signed)len) {
-            newlen = 0;
-        } else if (end >= (signed)len) {
-            end = (int)len-1;                                                   WIN_PORT_FIX /* cast (int) */
+    newlen = (start > end) ? 0 : (end-start)+1;//获取新字符串的长度 包括0终止
+    if (newlen != 0) {//新的字符串长度>0的情况下  检查看下异常情况
+        if (start >= (signed)len) {//start比原字符串都大 那么是一个异常
+            newlen = 0;//字符串长度为0
+        } else if (end >= (signed)len) {//end 比原字符串都大 那么是一个异常
+            end = (int)len-1;                                                   WIN_PORT_FIX /* cast (int) *///end修正为len-1
             newlen = (start > end) ? 0 : (end-start)+1;
         }
     } else {
@@ -636,14 +636,14 @@ void sdsrange(sds s, int start, int end) {
 }
 
 /* Apply tolower() to every character of the sds string 's'. */
-void sdstolower(sds s) {
+void sdstolower(sds s) {//sds转换为小写
     int len = (int)sdslen(s), j;                                                WIN_PORT_FIX /* cast (int) */
 
     for (j = 0; j < len; j++) s[j] = tolower(s[j]);
 }
 
 /* Apply toupper() to every character of the sds string 's'. */
-void sdstoupper(sds s) {
+void sdstoupper(sds s) {//sds转换为大写
     int len = (int)sdslen(s), j;                                                WIN_PORT_FIX /* cast (int) */
 
     for (j = 0; j < len; j++) s[j] = toupper(s[j]);
@@ -660,7 +660,7 @@ void sdstoupper(sds s) {
  * If two strings share exactly the same prefix, but one of the two has
  * additional characters, the longer string is considered to be greater than
  * the smaller one. */
-int sdscmp(const sds s1, const sds s2) {
+int sdscmp(const sds s1, const sds s2) {//字符串对比函数  先拿相同的长度做对比 然后如果对比为0的话 就拿长度做对比
     size_t l1, l2, minlen;
     int cmp;
 
@@ -778,14 +778,14 @@ sds sdscatrepr(sds s, const char *p, size_t len) {
 
 /* Helper function for sdssplitargs() that returns non zero if 'c'
  * is a valid hex digit. */
-int is_hex_digit(char c) {
+int is_hex_digit(char c) {//是否是一个16进制字符
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
            (c >= 'A' && c <= 'F');
 }
 
 /* Helper function for sdssplitargs() that converts a hex digit into an
  * integer from 0 to 15 */
-int hex_digit_to_int(char c) {
+int hex_digit_to_int(char c) {//16进制字符转换为数字
     switch(c) {
     case '0': return 0;
     case '1': return 1;
@@ -961,7 +961,7 @@ sds sdsmapchars(sds s, const char *from, const char *to, size_t setlen) {
 
 /* Join an array of C strings using the specified separator (also a C string).
  * Returns the result as an sds string. */
-sds sdsjoin(char **argv, int argc, char *sep) {
+sds sdsjoin(char **argv, int argc, char *sep) {//将argv字符串数组里面的数组链接起来放到 sds字符串里面。用sep风隔  注意最后一个风隔符的处理 我一般都是循环完了以后trim一把
     sds join = sdsempty();
     int j;
 
