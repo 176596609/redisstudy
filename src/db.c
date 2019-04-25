@@ -44,7 +44,7 @@ void slotToKeyFlush(void);
  * C-level DB API
  *----------------------------------------------------------------------------*/
 
-robj *lookupKey(redisDb *db, robj *key) {
+robj *lookupKey(redisDb *db, robj *key) {//注意不管是key 还是value redis保存的都是对象
     dictEntry *de = dictFind(db->dict,key->ptr);
     if (de) {
         robj *val = dictGetVal(de);
@@ -53,7 +53,7 @@ robj *lookupKey(redisDb *db, robj *key) {
          * Don't do it if we have a saving child, as this will trigger
          * a copy on write madness. */
         if (server.rdb_child_pid == -1 && server.aof_child_pid == -1)
-            val->lru = LRU_CLOCK();
+            val->lru = LRU_CLOCK();//更新时间戳
         return val;
     } else {
         return NULL;
@@ -624,7 +624,7 @@ void lastsaveCommand(redisClient *c) {
     addReplyLongLong(c,server.lastsave);
 }
 
-void typeCommand(redisClient *c) {
+void typeCommand(redisClient *c) {//获得value的底层实现type
     robj *o;
     char *type;
 
@@ -833,7 +833,7 @@ void propagateExpire(redisDb *db, robj *key) {
     decrRefCount(argv[1]);
 }
 
-int expireIfNeeded(redisDb *db, robj *key) {
+int expireIfNeeded(redisDb *db, robj *key) {//检查key是否已经过期 是的话就删掉
     mstime_t when = getExpire(db,key);
     mstime_t now;
 

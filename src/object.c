@@ -42,7 +42,7 @@ POSIX_ONLY(#include <pthread.h>)
 #define strtold(a,b) ((PORT_LONGDOUBLE)strtod((a),(b)))
 #endif
 
-robj *createObject(int type, void *ptr) {
+robj *createObject(int type, void *ptr) {//创建一个redis通用字符串对象 ptr直接指向字符串
     robj *o = zmalloc(sizeof(*o));
     o->type = type;
     o->encoding = REDIS_ENCODING_RAW;
@@ -56,7 +56,7 @@ robj *createObject(int type, void *ptr) {
 
 /* Create a string object with encoding REDIS_ENCODING_RAW, that is a plain
  * string object where o->ptr points to a proper sds string. */
-robj *createRawStringObject(char *ptr, size_t len) {
+robj *createRawStringObject(char *ptr, size_t len) {//注意sds其实看起来就是个char* 但是实际上是个对象
     return createObject(REDIS_STRING,sdsnewlen(ptr,len));
 }
 
@@ -64,18 +64,18 @@ robj *createRawStringObject(char *ptr, size_t len) {
  * an object where the sds string is actually an unmodifiable string
  * allocated in the same chunk as the object itself. */
 robj *createEmbeddedStringObject(char *ptr, size_t len) {
-    robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr)+len+1);
-    struct sdshdr *sh = (void*)(o+1);
+    robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr)+len+1);//一次就申请够内存
+    struct sdshdr *sh = (void*)(o+1);//等价于 O+sizeof(robj)  指向sdshdr
 
     o->type = REDIS_STRING;
     o->encoding = REDIS_ENCODING_EMBSTR;
-    o->ptr = sh+1;
+    o->ptr = sh+1;//其实就是sh->buf
     o->refcount = 1;
     o->lru = LRU_CLOCK();
 
     sh->len = (unsigned int)len;                                                WIN_PORT_FIX /* cast (unsigned int) */
     sh->free = 0;
-    if (ptr) {
+    if (ptr) {//拷贝内存
         memcpy(sh->buf,ptr,len);
         sh->buf[len] = '\0';
     } else {
@@ -91,16 +91,16 @@ robj *createEmbeddedStringObject(char *ptr, size_t len) {
  * The current limit of 39 is chosen so that the biggest string object
  * we allocate as EMBSTR will still fit into the 64 byte arena of jemalloc. */
 #define REDIS_ENCODING_EMBSTR_SIZE_LIMIT 39
-robj *createStringObject(char *ptr, size_t len) {
+robj *createStringObject(char *ptr, size_t len) {//创建一个合适的字符串对象
     if (len <= REDIS_ENCODING_EMBSTR_SIZE_LIMIT)
-        return createEmbeddedStringObject(ptr,len);
+        return createEmbeddedStringObject(ptr,len);//申请和释放一次 函数已经注释
     else
-        return createRawStringObject(ptr,len);
+        return createRawStringObject(ptr,len);//申请和释放两次  函数已经注释
 }
 
-robj *createStringObjectFromLongLong(PORT_LONGLONG value) {
+robj *createStringObjectFromLongLong(PORT_LONGLONG value) {//将一个long long整数转换为一个字符串对象
     robj *o;
-    if (value >= 0 && value < REDIS_SHARED_INTEGERS) {
+    if (value >= 0 && value < REDIS_SHARED_INTEGERS) {//如果小于10000 那么直接返回共享对象
         incrRefCount(shared.integers[value]);
         o = shared.integers[value];
     } else {
@@ -367,7 +367,7 @@ int isObjectRepresentableAsLongLong(robj *o, PORT_LONGLONG *llval) {
 }
 
 /* Try to encode a string object in order to save space */
-robj *tryObjectEncoding(robj *o) {
+robj *tryObjectEncoding(robj *o) {//转换字符串对象底层存储方式为比较合适的编码 主要是为了节约空间？貌似是把数字字符串转换为数字 或者效率更高的EmbeddedString
     PORT_LONG value;
     sds s = o->ptr;
     size_t len;
@@ -376,7 +376,7 @@ robj *tryObjectEncoding(robj *o) {
      * in this function. Other types use encoded memory efficient
      * representations but are handled by the commands implementing
      * the type. */
-    redisAssertWithInfo(NULL,o,o->type == REDIS_STRING);
+    redisAssertWithInfo(NULL,o,o->type == REDIS_STRING);//确保是个字符串对象
 
     /* We try some specialized encoding only for objects that are
      * RAW or EMBSTR encoded, in other words objects that are still
@@ -392,7 +392,7 @@ robj *tryObjectEncoding(robj *o) {
      * Note that we are sure that a string larger than 21 chars is not
      * representable as a 32 nor 64 bit integer. */
     len = sdslen(s);
-    if (len <= 21 && string2l(s,len,&value)) {
+    if (len <= 21 && string2l(s,len,&value)) {//如果字符串小于21个字符 那么转换成数字
         /* This object is encodable as a long. Try to use a shared object.
          * Note that we avoid using shared integers when maxmemory is used
          * because every object needs to have a private LRU field for the LRU
@@ -401,12 +401,12 @@ robj *tryObjectEncoding(robj *o) {
              (server.maxmemory_policy != REDIS_MAXMEMORY_VOLATILE_LRU &&
               server.maxmemory_policy != REDIS_MAXMEMORY_ALLKEYS_LRU)) &&
             value >= 0 &&
-            value < REDIS_SHARED_INTEGERS)
+            value < REDIS_SHARED_INTEGERS)//如果字符串小于10000那么直接使用共享对象
         {
             decrRefCount(o);
             incrRefCount(shared.integers[value]);
             return shared.integers[value];
-        } else {
+        } else {//否则就直接使用数字
             if (o->encoding == REDIS_ENCODING_RAW) sdsfree(o->ptr);
             o->encoding = REDIS_ENCODING_INT;
             o->ptr = (void*) value;
@@ -418,7 +418,7 @@ robj *tryObjectEncoding(robj *o) {
      * try the EMBSTR encoding which is more efficient.
      * In this representation the object and the SDS string are allocated
      * in the same chunk of memory to save space and cache misses. */
-    if (len <= REDIS_ENCODING_EMBSTR_SIZE_LIMIT) {
+    if (len <= REDIS_ENCODING_EMBSTR_SIZE_LIMIT) {//字符串长度大于21但是小于39 却没有使用EMBSTR转换成EMBSTR  注意EmbeddedString是只读的
         robj *emb;
 
         if (o->encoding == REDIS_ENCODING_EMBSTR) return o;
@@ -707,17 +707,17 @@ PORT_ULONGLONG estimateObjectIdleTime(robj *o) {
 
 /* This is a helper function for the OBJECT command. We need to lookup keys
  * without any modification of LRU or other parameters. */
-robj *objectCommandLookup(redisClient *c, robj *key) {
+robj *objectCommandLookup(redisClient *c, robj *key) {//查找一个key对应的对象
     dictEntry *de;
 
-    if ((de = dictFind(c->db->dict,key->ptr)) == NULL) return NULL;
-    return (robj*) dictGetVal(de);
+    if ((de = dictFind(c->db->dict,key->ptr)) == NULL) return NULL;//没有找到 返回null
+    return (robj*) dictGetVal(de);//找到了 返回对象指针
 }
 
 robj *objectCommandLookupOrReply(redisClient *c, robj *key, robj *reply) {
-    robj *o = objectCommandLookup(c,key);
+    robj *o = objectCommandLookup(c,key);//查找一个key对应的value对象
 
-    if (!o) addReply(c, reply);
+    if (!o) addReply(c, reply);//直接答复一个对象
     return o;
 }
 
@@ -730,8 +730,8 @@ void objectCommand(redisClient *c) {
         if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))
                 == NULL) return;
         addReplyLongLong(c,o->refcount);
-    } else if (!strcasecmp(c->argv[1]->ptr,"encoding") && c->argc == 3) {
-        if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))
+    } else if (!strcasecmp(c->argv[1]->ptr,"encoding") && c->argc == 3) {//查看value对象 底层实现方式 
+        if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))//查看该key是否存在，不存在直接答复终端
                 == NULL) return;
         addReplyBulkCString(c,strEncoding(o->encoding));
     } else if (!strcasecmp(c->argv[1]->ptr,"idletime") && c->argc == 3) {

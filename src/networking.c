@@ -212,19 +212,19 @@ robj *dupLastObjectIfNeeded(list *reply) {
  * Low level functions to add more data to output buffers.
  * -------------------------------------------------------------------------- */
 
-int _addReplyToBuffer(redisClient *c, char *s, size_t len) {
-    size_t available = sizeof(c->buf)-c->bufpos;
+int _addReplyToBuffer(redisClient *c, char *s, size_t len) {//附加socket输出到缓存
+    size_t available = sizeof(c->buf)-c->bufpos;//查看输出缓存还有多少 输出缓存共有16K
 
     if (c->flags & REDIS_CLOSE_AFTER_REPLY) return REDIS_OK;
 
     /* If there already are entries in the reply list, we cannot
      * add anything more to the static buffer. */
-    if (listLength(c->reply) > 0) return REDIS_ERR;
+    if (listLength(c->reply) > 0) return REDIS_ERR;//如果输出链表不为空，那么说明输出缓存已经满了 
 
     /* Check that the buffer has enough space available for this string. */
-    if (len > available) return REDIS_ERR;
+    if (len > available) return REDIS_ERR;//如果输出缓存不足 也直接返回
 
-    memcpy(c->buf+c->bufpos,s,len);
+    memcpy(c->buf+c->bufpos,s,len);//拷贝输出到输出缓存
     c->bufpos+=(int)len;                                                        WIN_PORT_FIX /* cast (int) */
     return REDIS_OK;
 }
@@ -297,30 +297,30 @@ void _addReplyStringToList(redisClient *c, char *s, size_t len) {
 
     if (c->flags & REDIS_CLOSE_AFTER_REPLY) return;
 
-    if (listLength(c->reply) == 0) {
-        robj *o = createStringObject(s,len);
+    if (listLength(c->reply) == 0) {//如果链表为空
+        robj *o = createStringObject(s,len);//创建字符串对象
 
-        listAddNodeTail(c->reply,o);
+        listAddNodeTail(c->reply,o);//加入链表尾部
         c->reply_bytes += getStringObjectSdsUsedMemory(o);
     } else {
-        tail = listNodeValue(listLast(c->reply));
+        tail = listNodeValue(listLast(c->reply));//获取尾巴上的节点指针
 
         /* Append to this object when possible. */
         if (tail->ptr != NULL && tail->encoding == REDIS_ENCODING_RAW &&
-            sdslen(tail->ptr)+len <= REDIS_REPLY_CHUNK_BYTES)
+            sdslen(tail->ptr)+len <= REDIS_REPLY_CHUNK_BYTES)//****没有细看 应该是往尾巴节点里面继续填充数据
         {
             c->reply_bytes -= zmalloc_size_sds(tail->ptr);
             tail = dupLastObjectIfNeeded(c->reply);
             tail->ptr = sdscatlen(tail->ptr,s,len);
             c->reply_bytes += zmalloc_size_sds(tail->ptr);
-        } else {
+        } else {//生成新的节点，直接追加到尾巴节点之后
             robj *o = createStringObject(s,len);
 
             listAddNodeTail(c->reply,o);
             c->reply_bytes += getStringObjectSdsUsedMemory(o);
         }
     }
-    asyncCloseClientOnOutputBufferLimitReached(c);
+    asyncCloseClientOnOutputBufferLimitReached(c);//看是否触发了缓存软硬限制 如果触发了 异步掐断链接
 }
 
 /* -----------------------------------------------------------------------------
@@ -329,7 +329,7 @@ void _addReplyStringToList(redisClient *c, char *s, size_t len) {
  * -------------------------------------------------------------------------- */
 
 void addReply(redisClient *c, robj *obj) {
-    if (prepareClientToWrite(c) != REDIS_OK) return;
+    if (prepareClientToWrite(c) != REDIS_OK) return;//注册socket写事件
 
     /* This is an important place where we can avoid copy-on-write
      * when there is a saving child running, avoiding touching the
@@ -379,9 +379,9 @@ void addReplySds(redisClient *c, sds s) {
 }
 
 void addReplyString(redisClient *c, char *s, size_t len) {
-    if (prepareClientToWrite(c) != REDIS_OK) return;
-    if (_addReplyToBuffer(c,s,len) != REDIS_OK)
-        _addReplyStringToList(c,s,len);
+    if (prepareClientToWrite(c) != REDIS_OK) return;//注册socket写事件
+    if (_addReplyToBuffer(c,s,len) != REDIS_OK)//附加应答信息到输出缓存
+        _addReplyStringToList(c,s,len);//如果输出缓存已经满了 那么追加信息到输出链表里面
 }
 
 void addReplyErrorLength(redisClient *c, char *s, size_t len) {
@@ -410,13 +410,13 @@ void addReplyErrorFormat(redisClient *c, const char *fmt, ...) {
     sdsfree(s);
 }
 
-void addReplyStatusLength(redisClient *c, char *s, size_t len) {
+void addReplyStatusLength(redisClient *c, char *s, size_t len) {//答复一个二进制流 可以是字符串 
     addReplyString(c,"+",1);
     addReplyString(c,s,len);
     addReplyString(c,"\r\n",2);
 }
 
-void addReplyStatus(redisClient *c, char *status) {
+void addReplyStatus(redisClient *c, char *status) {//答复终端一个字符串
     addReplyStatusLength(c,status,strlen(status));
 }
 
@@ -491,7 +491,7 @@ void addReplyLongLongWithPrefix(redisClient *c, PORT_LONGLONG ll, char prefix) {
     /* Things like $3\r\n or *2\r\n are emitted very often by the protocol
      * so we have a few shared objects to use if the integer is small
      * like it is most of the times. */
-    if (prefix == '*' && ll < REDIS_SHARED_BULKHDR_LEN) {
+    if (prefix == '*' && ll < REDIS_SHARED_BULKHDR_LEN) {//如果以常用的*或者$开头，那么直接从缓存中取出来节约性能
         addReply(c,shared.mbulkhdr[ll]);
         return;
     } else if (prefix == '$' && ll < REDIS_SHARED_BULKHDR_LEN) {
@@ -499,11 +499,11 @@ void addReplyLongLongWithPrefix(redisClient *c, PORT_LONGLONG ll, char prefix) {
         return;
     }
 
-    buf[0] = prefix;
-    len = ll2string(buf+1,sizeof(buf)-1,ll);
-    buf[len+1] = '\r';
+    buf[0] = prefix;//如果不是以常用的开头进来 那么直接自己生成并回复
+    len = ll2string(buf+1,sizeof(buf)-1,ll);//长整型转换为字符串
+    buf[len+1] = '\r';//追加\r\n
     buf[len+2] = '\n';
-    addReplyString(c,buf,len+3);
+    addReplyString(c,buf,len+3);//输出到客户端
 }
 
 void addReplyLongLong(redisClient *c, PORT_LONGLONG ll) {
@@ -1793,8 +1793,8 @@ void asyncCloseClientOnOutputBufferLimitReached(redisClient *c) {
     if (checkClientOutputBufferLimits(c)) {
         sds client = catClientInfoString(sdsempty(),c);
 
-        freeClientAsync(c);
-        redisLog(REDIS_WARNING,"Client %s scheduled to be closed ASAP for overcoming of output buffer limits.", client);
+        freeClientAsync(c);//终端加入异步掐断列表
+        redisLog(REDIS_WARNING,"Client %s scheduled to be closed ASAP for overcoming of output buffer limits.", client);//记录掐断日志
         sdsfree(client);
     }
 }

@@ -113,7 +113,7 @@
 #include "redisassert.h"
 
 #ifdef _WIN32
-#include "Win32_Interop/Win32_FDAPI.h"
+#include "Win32_Interop/Win32_FDAPI.h"//压缩列表的优势是 1 节约内存 2在元素比较少时 可以比链表更快的载入内存，但数据量增大时，这种优势就不明显了
 #endif
 
 #define ZIP_END 255
@@ -139,17 +139,17 @@
 #define INT24_MAX 0x7fffff
 #define INT24_MIN (-INT24_MAX - 1)
 
-/* Macro to determine type */
+/* Macro to determine type *///ziplist的一个目的是缩减内存  看起来ziplist没有直接使用结构体 而是使用了c语言的指针及偏移 和 宏进行处理 不知为啥这么设计
 #define ZIP_IS_STR(enc) (((enc) & ZIP_STR_MASK) < ZIP_STR_MASK)
 
 /* Utility macros */
-#define ZIPLIST_BYTES(zl)       (*((uint32_t*)(zl)))
-#define ZIPLIST_TAIL_OFFSET(zl) (*((uint32_t*)((zl)+sizeof(uint32_t))))
-#define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))
-#define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))
-#define ZIPLIST_ENTRY_HEAD(zl)  ((zl)+ZIPLIST_HEADER_SIZE)
-#define ZIPLIST_ENTRY_TAIL(zl)  ((zl)+intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl)))
-#define ZIPLIST_ENTRY_END(zl)   ((zl)+intrev32ifbe(ZIPLIST_BYTES(zl))-1)
+#define ZIPLIST_BYTES(zl)       (*((uint32_t*)(zl)))/*获取整个压缩列表的大小*/
+#define ZIPLIST_TAIL_OFFSET(zl) (*((uint32_t*)((zl)+sizeof(uint32_t))))/*获取尾部偏移*/
+#define ZIPLIST_LENGTH(zl)      (*((uint16_t*)((zl)+sizeof(uint32_t)*2)))/*获取列表的长度 多少个节点*/
+#define ZIPLIST_HEADER_SIZE     (sizeof(uint32_t)*2+sizeof(uint16_t))/*整个压缩列表的大小 第一个uint32_t表示压缩列表占用的内存直接 第二个uint32_t记录压缩列表尾节点记录距离起始节点的长度 第三个uint16_t代表压缩列表的长度，如果大于65535时必须遍历整个列表才能获取长度*/
+#define ZIPLIST_ENTRY_HEAD(zl)  ((zl)+ZIPLIST_HEADER_SIZE)/*获取第一个元素的偏移*/
+#define ZIPLIST_ENTRY_TAIL(zl)  ((zl)+intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl)))/*尾节点的地址*/
+#define ZIPLIST_ENTRY_END(zl)   ((zl)+intrev32ifbe(ZIPLIST_BYTES(zl))-1)/*整个压缩列表的尾部*/
 
 /* We know a positive increment can only be 1 because entries can only be
  * pushed one at a time. */
@@ -425,6 +425,7 @@ unsigned char *ziplistNew(void) {
     ZIPLIST_BYTES(zl) = intrev32ifbe(bytes);
     ZIPLIST_TAIL_OFFSET(zl) = intrev32ifbe(ZIPLIST_HEADER_SIZE);
     ZIPLIST_LENGTH(zl) = 0;
+
     zl[bytes-1] = ZIP_END;
     return zl;
 }

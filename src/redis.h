@@ -196,15 +196,15 @@ POSIX_ONLY(#define REDIS_MAX_LOGMSG_LEN    1024) /* Default maximum length of sy
 /* Objects encoding. Some kind of objects like Strings and Hashes can be
  * internally represented in multiple ways. The 'encoding' field of the object
  * is set to one of this fields for this object. */
-#define REDIS_ENCODING_RAW 0     /* Raw representation */
-#define REDIS_ENCODING_INT 1     /* Encoded as integer */
-#define REDIS_ENCODING_HT 2      /* Encoded as hash table */
+#define REDIS_ENCODING_RAW 0     /* Raw representation */ //简单动态字符串
+#define REDIS_ENCODING_INT 1     /* Encoded as integer */ //整数
+#define REDIS_ENCODING_HT 2      /* Encoded as hash table */ //字典哈希字典
 #define REDIS_ENCODING_ZIPMAP 3  /* Encoded as zipmap */
-#define REDIS_ENCODING_LINKEDLIST 4 /* Encoded as regular linked list */
-#define REDIS_ENCODING_ZIPLIST 5 /* Encoded as ziplist */
-#define REDIS_ENCODING_INTSET 6  /* Encoded as intset */
-#define REDIS_ENCODING_SKIPLIST 7  /* Encoded as skiplist */
-#define REDIS_ENCODING_EMBSTR 8  /* Embedded sds string encoding */
+#define REDIS_ENCODING_LINKEDLIST 4 /* Encoded as regular linked list *///双端链表
+#define REDIS_ENCODING_ZIPLIST 5 /* Encoded as ziplist *///压缩列表
+#define REDIS_ENCODING_INTSET 6  /* Encoded as intset *///整数集合
+#define REDIS_ENCODING_SKIPLIST 7  /* Encoded as skiplist *///跳跃表
+#define REDIS_ENCODING_EMBSTR 8  /* Embedded sds string encoding *///embstr字符串
 
 /* Defines related to the dump file format. To store 32 bits lengths for short
  * keys requires a lot of space, so we check the most significant 2 bits of
@@ -435,11 +435,11 @@ POSIX_ONLY(#define REDIS_DEFAULT_VERBOSITY REDIS_NOTICE)
 #define REDIS_LRU_CLOCK_MAX ((1<<REDIS_LRU_BITS)-1) /* Max value of obj->lru */
 #define REDIS_LRU_CLOCK_RESOLUTION 1000 /* LRU clock resolution in ms */
 typedef struct redisObject {
-    unsigned type:4;
-    unsigned encoding:4;
+    unsigned type:4;//类型	大的类型
+    unsigned encoding:4;//编码  具体的实现方案
     unsigned lru:REDIS_LRU_BITS; /* lru time (relative to server.lruclock) */
-    int refcount;
-    void *ptr;
+    int refcount;//引用计数
+    void *ptr;//指向底层的数据结构指针
 } robj;
 
 /* Macro used to obtain the current LRU clock.
@@ -550,7 +550,7 @@ typedef struct redisClient {
     int reqtype;
     int multibulklen;       /* number of multi bulk arguments left to read */
     PORT_LONG bulklen;           /* length of bulk argument in multi bulk request */
-    list *reply;
+    list *reply;//redis输出链表
     PORT_ULONG reply_bytes; /* Tot bytes of objects in reply list */
     int sentlen;            /* Amount of bytes already sent in the current
                                buffer or object being sent. */
@@ -586,7 +586,7 @@ typedef struct redisClient {
 
     /* Response buffer */
     int bufpos;
-    char buf[REDIS_REPLY_CHUNK_BYTES];
+    char buf[REDIS_REPLY_CHUNK_BYTES];//16K的输出缓存
 } redisClient;
 
 struct saveparam {

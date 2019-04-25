@@ -97,33 +97,33 @@ void setCommand(redisClient *c) {
     int unit = UNIT_SECONDS;
     int flags = REDIS_SET_NO_FLAGS;
 
-    for (j = 3; j < c->argc; j++) {
+    for (j = 3; j < c->argc; j++) {//如果参数大于三个，那么检查可选参数
         char *a = c->argv[j]->ptr;
-        robj *next = (j == c->argc-1) ? NULL : c->argv[j+1];
+        robj *next = (j == c->argc-1) ? NULL : c->argv[j+1];//查看是否有下个参数
 
         if ((a[0] == 'n' || a[0] == 'N') &&
             (a[1] == 'x' || a[1] == 'X') && a[2] == '\0') {
-            flags |= REDIS_SET_NX;
+            flags |= REDIS_SET_NX;//Set if key not exists. 
         } else if ((a[0] == 'x' || a[0] == 'X') &&
                    (a[1] == 'x' || a[1] == 'X') && a[2] == '\0') {
-            flags |= REDIS_SET_XX;
+            flags |= REDIS_SET_XX; //Set if key exists. 
         } else if ((a[0] == 'e' || a[0] == 'E') &&
                    (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' && next) {
-            unit = UNIT_SECONDS;
+            unit = UNIT_SECONDS;//key 的超时时间 sec
             expire = next;
             j++;
         } else if ((a[0] == 'p' || a[0] == 'P') &&
                    (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' && next) {
-            unit = UNIT_MILLISECONDS;
+            unit = UNIT_MILLISECONDS;//key的超时时间 ms
             expire = next;
             j++;
         } else {
-            addReply(c,shared.syntaxerr);
+            addReply(c,shared.syntaxerr);//返回语法错误
             return;
         }
     }
 
-    c->argv[2] = tryObjectEncoding(c->argv[2]);
+    c->argv[2] = tryObjectEncoding(c->argv[2]);//转换值对象底层存储方式为比较合适的编码 主要是为了节约空间？
     setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);
 }
 
