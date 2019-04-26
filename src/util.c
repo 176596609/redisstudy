@@ -328,7 +328,7 @@ int ll2string(char* dst, size_t dstlen, PORT_LONGLONG svalue) {//Êý×Ösvalue×ª»»Î
 /* Convert a string into a PORT_LONGLONG. Returns 1 if the string could be parsed
  * into a (non-overflowing) PORT_LONGLONG, 0 otherwise. The value will be set to
  * the parsed value when appropriate. */
-int string2ll(const char *s, size_t slen, PORT_LONGLONG *value) {
+int string2ll(const char *s, size_t slen, PORT_LONGLONG *value) {//×Ö·û´®×ª»»ÎªÊý×Ö
     const char *p = s;
     size_t plen = 0;
     int negative = 0;
@@ -338,12 +338,12 @@ int string2ll(const char *s, size_t slen, PORT_LONGLONG *value) {
         return 0;
 
     /* Special case: first and only digit is 0. */
-    if (slen == 1 && p[0] == '0') {
+    if (slen == 1 && p[0] == '0') {//¼ì²é³¤¶ÈÊÇ²»ÊÇ1 ÊÇ²»ÊÇÖ»ÊÇÊý×Ö0
         if (value != NULL) *value = 0;
         return 1;
     }
 
-    if (p[0] == '-') {
+    if (p[0] == '-') {//¼ì²éÊÇ²»ÊÇ¸ºÊý
         negative = 1;
         p++; plen++;
 
@@ -353,7 +353,7 @@ int string2ll(const char *s, size_t slen, PORT_LONGLONG *value) {
     }
 
     /* First digit should be 1-9, otherwise the string should just be 0. */
-    if (p[0] >= '1' && p[0] <= '9') {
+    if (p[0] >= '1' && p[0] <= '9') {//¿´µÚÒ»Î»ÊÇ²»ÊÇÊý×Ö
         v = p[0]-'0';
         p++; plen++;
     } else if (p[0] == '0' && slen == 1) {

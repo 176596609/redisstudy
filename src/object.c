@@ -42,7 +42,7 @@ POSIX_ONLY(#include <pthread.h>)
 #define strtold(a,b) ((PORT_LONGDOUBLE)strtod((a),(b)))
 #endif
 
-robj *createObject(int type, void *ptr) {//´´½¨Ò»¸öredisÍ¨ÓÃ×Ö·û´®¶ÔÏó ptrÖ±½ÓÖ¸Ïò×Ö·û´®
+robj *createObject(int type, void *ptr) {//´´½¨Ò»¸öredisÍ¨ÓÃ×Ö·û´®¶ÔÏó ptrÖ±½ÓÖ¸Ïò×Ö·û´®  ÏêÏ¸½á¹¹Í¼¿ÉÒÔ²Î¿¼ redisÏà¹ØÊé¼®
     robj *o = zmalloc(sizeof(*o));
     o->type = type;
     o->encoding = REDIS_ENCODING_RAW;
@@ -104,7 +104,7 @@ robj *createStringObjectFromLongLong(PORT_LONGLONG value) {//½«Ò»¸ölong longÕûÊı
         incrRefCount(shared.integers[value]);
         o = shared.integers[value];
     } else {
-        if (value >= PORT_LONG_MIN && value <= PORT_LONG_MAX) {
+        if (value >= PORT_LONG_MIN && value <= PORT_LONG_MAX) {//Èç¹ûÊÇÒ»¸ölongÕûÊı·¶Î§ ÄÇÃ´Ö±½Ó±£´æÊı×Ö
             o = createObject(REDIS_STRING, NULL);
             o->encoding = REDIS_ENCODING_INT;
             o->ptr = (void*)(value);                                            /* WIN_PORT_FIX: (long) cast removed */
@@ -165,7 +165,7 @@ robj *createStringObjectFromLongDouble(PORT_LONGDOUBLE value, int humanfriendly)
  * will always result in a fresh object that is unshared (refcount == 1).
  *
  * The resulting object always has refcount set to 1. */
-robj *dupStringObject(robj *o) {
+robj *dupStringObject(robj *o) {//¿½±´Ò»·İ×Ö·û´®³öÀ´  ÊµÏÖºÜ¼òµ¥
     robj *d;
 
     redisAssert(o->type == REDIS_STRING);
@@ -186,7 +186,7 @@ robj *dupStringObject(robj *o) {
     }
 }
 
-robj *createListObject(void) {
+robj *createListObject(void) {//´´½¨Ò»¸öÁĞ±í¶ÔÏó  ÆäÊµ¾ÍÊÇÒ»¸öË«¶ËÁĞ±í
     list *l = listCreate();
     robj *o = createObject(REDIS_LIST,l);
     listSetFreeMethod(l,decrRefCountVoid);
@@ -194,35 +194,35 @@ robj *createListObject(void) {
     return o;
 }
 
-robj *createZiplistObject(void) {
+robj *createZiplistObject(void) {//´´½¨Ò»¸öÑ¹ËõÁĞ±í
     unsigned char *zl = ziplistNew();
     robj *o = createObject(REDIS_LIST,zl);
     o->encoding = REDIS_ENCODING_ZIPLIST;
     return o;
 }
 
-robj *createSetObject(void) {
-    dict *d = dictCreate(&setDictType,NULL);
+robj *createSetObject(void) {//´´½¨Ò»¸ö¼¯ºÏ ÆäÊµ¾ÍÊÇÒ»¸ö¹şÏ£±í
+    dict *d = dictCreate(&setDictType,NULL);//setDictTypeÊÇ¹şÏ£ ¶Ô±ÈµÈ×é³ÉµÄ½á¹¹Ìå
     robj *o = createObject(REDIS_SET,d);
     o->encoding = REDIS_ENCODING_HT;
     return o;
 }
 
-robj *createIntsetObject(void) {
+robj *createIntsetObject(void) {//´´½¨Ò»¸öÕûÊı¼¯ºÏ¶ÔÏó
     intset *is = intsetNew();
     robj *o = createObject(REDIS_SET,is);
     o->encoding = REDIS_ENCODING_INTSET;
     return o;
 }
 
-robj *createHashObject(void) {
+robj *createHashObject(void) {//´´½¨Ò»¸öÑ¹ËõÁĞ±í¶ÔÏó
     unsigned char *zl = ziplistNew();
     robj *o = createObject(REDIS_HASH, zl);
     o->encoding = REDIS_ENCODING_ZIPLIST;
     return o;
 }
 
-robj *createZsetObject(void) {
+robj *createZsetObject(void) {//´´½¨Ò»¸öÌøÔ¾±í¶ÔÏó
     zset *zs = zmalloc(sizeof(*zs));
     robj *o;
 
@@ -233,20 +233,20 @@ robj *createZsetObject(void) {
     return o;
 }
 
-robj *createZsetZiplistObject(void) {
+robj *createZsetZiplistObject(void) {//ÊÍ·Åziplist zset¶ÔÏó
     unsigned char *zl = ziplistNew();
     robj *o = createObject(REDIS_ZSET,zl);
     o->encoding = REDIS_ENCODING_ZIPLIST;
     return o;
 }
 
-void freeStringObject(robj *o) {
+void freeStringObject(robj *o) {//ÊÍ·Å×Ö·û´®¶ÔÏó
     if (o->encoding == REDIS_ENCODING_RAW) {
         sdsfree(o->ptr);
     }
 }
 
-void freeListObject(robj *o) {
+void freeListObject(robj *o) {//ÊÍ·ÅÁĞ±í¶ÔÏó
     switch (o->encoding) {
     case REDIS_ENCODING_LINKEDLIST:
         listRelease((list*) o->ptr);
@@ -259,7 +259,7 @@ void freeListObject(robj *o) {
     }
 }
 
-void freeSetObject(robj *o) {
+void freeSetObject(robj *o) {//ÊÍ·Å¼¯ºÏ¶ÔÏó
     switch (o->encoding) {
     case REDIS_ENCODING_HT:
         dictRelease((dict*) o->ptr);
@@ -289,7 +289,7 @@ void freeZsetObject(robj *o) {
     }
 }
 
-void freeHashObject(robj *o) {
+void freeHashObject(robj *o) {//ÊÍ·Å¹şÏ£±í¶ÔÏó
     switch (o->encoding) {
     case REDIS_ENCODING_HT:
         dictRelease((dict*) o->ptr);
@@ -303,11 +303,11 @@ void freeHashObject(robj *o) {
     }
 }
 
-void incrRefCount(robj *o) {
+void incrRefCount(robj *o) {//Ôö¼ÓÓ¦ÓÃ¼ÇÊı
     o->refcount++;
 }
 
-void decrRefCount(robj *o) {
+void decrRefCount(robj *o) {//¼õÉÙÓ¦ÓÃ¼ÇÊı
     if (o->refcount <= 0) redisPanic("decrRefCount against refcount <= 0");
     if (o->refcount == 1) {
         switch(o->type) {
@@ -327,7 +327,7 @@ void decrRefCount(robj *o) {
 /* This variant of decrRefCount() gets its argument as void, and is useful
  * as free method in data structures that expect a 'void free_object(void*)'
  * prototype for the free method. */
-void decrRefCountVoid(void *o) {
+void decrRefCountVoid(void *o) {//¼õĞ¡ÒıÓÃ¼ÆÊı
     decrRefCount(o);
 }
 
@@ -343,12 +343,12 @@ void decrRefCountVoid(void *o) {
  *    functionThatWillIncrementRefCount(obj);
  *    decrRefCount(obj);
  */
-robj *resetRefCount(robj *obj) {
+robj *resetRefCount(robj *obj) {//ÖØÖÃÒıÓÃ¼ÆÊı
     obj->refcount = 0;
     return obj;
 }
 
-int checkType(redisClient *c, robj *o, int type) {
+int checkType(redisClient *c, robj *o, int type) {//¼ì²é¶ÔÏóµÄtypeÊÇ²»ÊÇÌØ¶¨Öµ
     if (o->type != type) {
         addReply(c,shared.wrongtypeerr);
         return 1;
@@ -356,7 +356,7 @@ int checkType(redisClient *c, robj *o, int type) {
     return 0;
 }
 
-int isObjectRepresentableAsLongLong(robj *o, PORT_LONGLONG *llval) {
+int isObjectRepresentableAsLongLong(robj *o, PORT_LONGLONG *llval) {//×Ö·û´®¶ÔÏó×ª»»Îª longlong
     redisAssertWithInfo(NULL,o,o->type == REDIS_STRING);
     if (o->encoding == REDIS_ENCODING_INT) {
         if (llval) *llval = (PORT_LONGLONG) o->ptr;
@@ -448,17 +448,17 @@ robj *tryObjectEncoding(robj *o) {//×ª»»×Ö·û´®¶ÔÏóµ×²ã´æ´¢·½Ê½Îª±È½ÏºÏÊÊµÄ±àÂë Ö
 
 /* Get a decoded version of an encoded object (returned as a new object).
  * If the object is already raw-encoded just increment the ref count. */
-robj *getDecodedObject(robj *o) {
+robj *getDecodedObject(robj *o) {//½«Ò»¸öÊı×ÖÊµÏÖµÄ×Ö·û´®¶ÔÏó  ×ª»»ÎªsdsÊµÏÖµÄ¶ÔÏó
     robj *dec;
 
-    if (sdsEncodedObject(o)) {
+    if (sdsEncodedObject(o)) {//Èç¹ûÒÑ¾­ÊÇsds×Ö·û´®¶ÔÏóÁË ÄÇÃ´¼òµ¥µÄÔö¼ÓÓ¦ÓÃ¼ÇÊı²¢·µ»Ø
         incrRefCount(o);
         return o;
     }
     if (o->type == REDIS_STRING && o->encoding == REDIS_ENCODING_INT) {
         char buf[32];
 
-        ll2string(buf,32,(PORT_LONG)o->ptr);
+        ll2string(buf,32,(PORT_LONG)o->ptr);//Êı×Ö×ª»»Îª×Ö·û´®
         dec = createStringObject(buf,strlen(buf));
         return dec;
     } else {
@@ -477,13 +477,13 @@ robj *getDecodedObject(robj *o) {
 #define REDIS_COMPARE_BINARY (1<<0)
 #define REDIS_COMPARE_COLL (1<<1)
 
-int compareStringObjectsWithFlags(robj *a, robj *b, int flags) {
+int compareStringObjectsWithFlags(robj *a, robj *b, int flags) {//±È½ÏÁ½¸ö×Ö·û´® ¸ù¾İflagµÄ²»Í¬   Ëµ°×ÁËÕâ¸ö¶Ô±Èº¯ÊıÆäÊµ±ÈstrcpyÒªÇ¿´óºÜ¶à »¹ÄÜ±È½Ï¶ş½øÖÆÁ÷
     redisAssertWithInfo(NULL,a,a->type == REDIS_STRING && b->type == REDIS_STRING);
     char bufa[128], bufb[128], *astr, *bstr;
     size_t alen, blen, minlen;
 
     if (a == b) return 0;
-    if (sdsEncodedObject(a)) {
+    if (sdsEncodedObject(a)) {//Ç¿ÖÆ×ª»»³Échar*½øĞĞ¶Ô±È
         astr = a->ptr;
         alen = sdslen(astr);
     } else {
@@ -498,11 +498,11 @@ int compareStringObjectsWithFlags(robj *a, robj *b, int flags) {
         bstr = bufb;
     }
     if (flags & REDIS_COMPARE_COLL) {
-        return strcoll(astr,bstr);
+        return strcoll(astr,bstr);//strcoll¹¦ÄÜºÍstrcmpÀàËÆ,ÓÃ·¨Ò²Ò»Ñù. ÌØ±ğ×¢Òâ:strcoll()»áÒÀ»·¾³±äÁ¿LC_COLLATEËùÖ¸¶¨µÄÎÄ×ÖÅÅÁĞ´ÎĞòÀ´±È½Ïs1ºÍs2 ×Ö·û´®¡£ strcmpÊÇ¸ù¾İASCIIÀ´±È½Ï2¸ö´®µÄ. ËµÃ÷ÈôLC_COLLATEÎª"POSIX"»ò"C"£¬Ôòstrcoll()Óëstrcmp()×÷ÓÃÍêÈ«ÏàÍ¬¡£
     } else {
         int cmp;
 
-        minlen = (alen < blen) ? alen : blen;
+        minlen = (alen < blen) ? alen : blen;//ÆäÊµÏÂÃæ¾ÍÊÇstrcpyµÄÊµÏÖ·½°¸
         cmp = memcmp(astr,bstr,minlen);
         if (cmp == 0) return (int)(alen-blen);                                  WIN_PORT_FIX /* cast (int) */
         return cmp;
