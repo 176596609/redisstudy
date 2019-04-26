@@ -364,7 +364,7 @@ int string2ll(const char *s, size_t slen, PORT_LONGLONG *value) {//×Ö·û´®×ª»»ÎªÊ
     }
 
     while (plen < slen && p[0] >= '0' && p[0] <= '9') {
-        if (v > (ULLONG_MAX / 10)) /* Overflow. */
+        if (v > (ULLONG_MAX / 10)) /* Overflow.Òç³ö */
             return 0;
         v *= 10;
 

@@ -448,7 +448,7 @@ robj *tryObjectEncoding(robj *o) {//×ª»»×Ö·û´®¶ÔÏóµ×²ã´æ´¢·½Ê½Îª±È½ÏºÏÊÊµÄ±àÂë Ö
 
 /* Get a decoded version of an encoded object (returned as a new object).
  * If the object is already raw-encoded just increment the ref count. */
-robj *getDecodedObject(robj *o) {//½«Ò»¸öÊý×ÖÊµÏÖµÄ×Ö·û´®¶ÔÏó  ×ª»»ÎªsdsÊµÏÖµÄ¶ÔÏó
+robj *getDecodedObject(robj *o) {//½«Ò»¸öÊý×ÖÊµÏÖµÄ×Ö·û´®¶ÔÏó  ×ª»»ÎªsdsÊµÏÖµÄ¶ÔÏó Êµ¼ÊÊÇ¶þ½øÖÆ°²È«µÄ ¿ÉÒÔ±£´æÈÎºÎÖµ  
     robj *dec;
 
     if (sdsEncodedObject(o)) {//Èç¹ûÒÑ¾­ÊÇsds×Ö·û´®¶ÔÏóÁË ÄÇÃ´¼òµ¥µÄÔö¼ÓÓ¦ÓÃ¼ÇÊý²¢·µ»Ø
@@ -523,7 +523,7 @@ int collateStringObjects(robj *a, robj *b) {
  * point of view of a string comparison, otherwise 0 is returned. Note that
  * this function is faster then checking for (compareStringObject(a,b) == 0)
  * because it can perform some more optimization. */
-int equalStringObjects(robj *a, robj *b) {
+int equalStringObjects(robj *a, robj *b) {//¶Ô±ÈÒ»¸ö×Ö·û´®  ×¢Òâredis×Ö·û´®ÊÇ¶þ½øÖÆ°²È«µÄ Òò´Ë¿ÉÒÔËµÊÇ¶Ô±È¶þ½øÖÆ
     if (a->encoding == REDIS_ENCODING_INT &&
         b->encoding == REDIS_ENCODING_INT){
         /* If both strings are integer encoded just check if the stored
@@ -534,7 +534,7 @@ int equalStringObjects(robj *a, robj *b) {
     }
 }
 
-size_t stringObjectLen(robj *o) {
+size_t stringObjectLen(robj *o) {//·µ»Ø×Ö·û´®µÄ³¤¶È
     redisAssertWithInfo(NULL,o,o->type == REDIS_STRING);
     if (sdsEncodedObject(o)) {
         return sdslen(o->ptr);
@@ -545,7 +545,7 @@ size_t stringObjectLen(robj *o) {
     }
 }
 
-int getDoubleFromObject(robj *o, double *target) {
+int getDoubleFromObject(robj *o, double *target) {//½«×Ö·û´®×ª»»Îª double
     double value;
     char *eptr;
 
@@ -573,7 +573,7 @@ int getDoubleFromObject(robj *o, double *target) {
     return REDIS_OK;
 }
 
-int getDoubleFromObjectOrReply(redisClient *c, robj *o, double *target, const char *msg) {
+int getDoubleFromObjectOrReply(redisClient *c, robj *o, double *target, const char *msg) {//½«¶ÔÏó×ª»»Îªdouble  »òÕßÍ¨¹ýÍøÂç·µ»ØÐÅÏ¢
     double value;
     if (getDoubleFromObject(o, &value) != REDIS_OK) {
         if (msg != NULL) {
@@ -587,7 +587,7 @@ int getDoubleFromObjectOrReply(redisClient *c, robj *o, double *target, const ch
     return REDIS_OK;
 }
 
-int getLongDoubleFromObject(robj *o, PORT_LONGDOUBLE *target) {
+int getLongDoubleFromObject(robj *o, PORT_LONGDOUBLE *target) {//¶ÔÏó×ª»»³ödouble
     PORT_LONGDOUBLE value;
     char *eptr;
 
@@ -611,7 +611,7 @@ int getLongDoubleFromObject(robj *o, PORT_LONGDOUBLE *target) {
     return REDIS_OK;
 }
 
-int getLongDoubleFromObjectOrReply(redisClient *c, robj *o, PORT_LONGDOUBLE *target, const char *msg) {
+int getLongDoubleFromObjectOrReply(redisClient *c, robj *o, PORT_LONGDOUBLE *target, const char *msg) {//¶ÔÏó×ª»»³É³¤ÕûÐÍ£¬»ò×Å´ð¸´ÖÕ¶Ë´íÎóÏûÏ¢
     PORT_LONGDOUBLE value;
     if (getLongDoubleFromObject(o, &value) != REDIS_OK) {
         if (msg != NULL) {
@@ -625,7 +625,7 @@ int getLongDoubleFromObjectOrReply(redisClient *c, robj *o, PORT_LONGDOUBLE *tar
     return REDIS_OK;
 }
 
-int getLongLongFromObject(robj *o, PORT_LONGLONG *target) {
+int getLongLongFromObject(robj *o, PORT_LONGLONG *target) {//¶ÔÏó×ª»»Îªlonglong
     PORT_LONGLONG value;
     char *eptr;
 
@@ -649,7 +649,7 @@ int getLongLongFromObject(robj *o, PORT_LONGLONG *target) {
     return REDIS_OK;
 }
 
-int getLongLongFromObjectOrReply(redisClient *c, robj *o, PORT_LONGLONG *target, const char *msg) {
+int getLongLongFromObjectOrReply(redisClient *c, robj *o, PORT_LONGLONG *target, const char *msg) {//¶ÔÏó×ª»»Îª³¤ÕûÐÍ »òÕß·µ»Ø¸øÖÕ¶Ë´íÎóÐÅÏ¢
     PORT_LONGLONG value;
     if (getLongLongFromObject(o, &value) != REDIS_OK) {
         if (msg != NULL) {
@@ -663,7 +663,7 @@ int getLongLongFromObjectOrReply(redisClient *c, robj *o, PORT_LONGLONG *target,
     return REDIS_OK;
 }
 
-int getLongFromObjectOrReply(redisClient *c, robj *o, PORT_LONG *target, const char *msg) {
+int getLongFromObjectOrReply(redisClient *c, robj *o, PORT_LONG *target, const char *msg) {//....
     PORT_LONGLONG value;
 
     if (getLongLongFromObjectOrReply(c, o, &value, msg) != REDIS_OK) return REDIS_ERR;
@@ -695,7 +695,7 @@ char *strEncoding(int encoding) {
 
 /* Given an object returns the min number of milliseconds the object was never
  * requested, using an approximated LRU algorithm. */
-PORT_ULONGLONG estimateObjectIdleTime(robj *o) {
+PORT_ULONGLONG estimateObjectIdleTime(robj *o) {//»ñÈ¡Ò»¸ö¶ÔÏóµÄ¿Õ×ªÊ±¼ä
     PORT_ULONGLONG lruclock = LRU_CLOCK();
     if (lruclock >= o->lru) {
         return (lruclock - o->lru) * REDIS_LRU_CLOCK_RESOLUTION;

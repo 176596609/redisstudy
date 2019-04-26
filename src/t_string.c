@@ -34,7 +34,7 @@
  * String Commands
  *----------------------------------------------------------------------------*/
 
-static int checkStringLength(redisClient *c, PORT_LONGLONG size) {
+static int checkStringLength(redisClient *c, PORT_LONGLONG size) {//字符串长度大于512M就返回客户端错误消息
     if (size > 512*1024*1024) {
         addReplyError(c,"string exceeds maximum allowed size (512MB)");
         return REDIS_ERR;
@@ -386,23 +386,23 @@ void incrbyfloatCommand(redisClient *c) {
     PORT_LONGDOUBLE incr, value;
     robj *o, *new, *aux;
 
-    o = lookupKeyWrite(c->db,c->argv[1]);
+    o = lookupKeyWrite(c->db,c->argv[1]);//查找value对应的对象
     if (o != NULL && checkType(c,o,REDIS_STRING)) return;
-    if (getLongDoubleFromObjectOrReply(c,o,&value,NULL) != REDIS_OK ||
-        getLongDoubleFromObjectOrReply(c,c->argv[2],&incr,NULL) != REDIS_OK)
+    if (getLongDoubleFromObjectOrReply(c,o,&value,NULL) != REDIS_OK ||/*获取value double值*/
+        getLongDoubleFromObjectOrReply(c,c->argv[2],&incr,NULL) != REDIS_OK)/*获取参数里面要增加的值*/
         return;
 
-    value += incr;
+    value += incr;//value增加用户指定的数目
     if (isnan(value) || isinf(value)) {
         addReplyError(c,"increment would produce NaN or Infinity");
         return;
     }
-    new = createStringObjectFromLongDouble(value,1);
+    new = createStringObjectFromLongDouble(value,1);//创建一个long double的字符串值
     if (o)
-        dbOverwrite(c->db,c->argv[1],new);
+        dbOverwrite(c->db,c->argv[1],new);//覆盖写这个字符串值
     else
-        dbAdd(c->db,c->argv[1],new);
-    signalModifiedKey(c->db,c->argv[1]);
+        dbAdd(c->db,c->argv[1],new);//增加一个键值对
+    signalModifiedKey(c->db,c->argv[1]);//标记一个KEY对应的value已经被改变 watch功能
     notifyKeyspaceEvent(REDIS_NOTIFY_STRING,"incrbyfloat",c->argv[1],c->db->id);
     server.dirty++;
     addReplyBulk(c,new);
@@ -421,27 +421,27 @@ void appendCommand(redisClient *c) {
     robj *o, *append;
 
     o = lookupKeyWrite(c->db,c->argv[1]);
-    if (o == NULL) {
+    if (o == NULL) {//如果没有找到这个key
         /* Create the key */
-        c->argv[2] = tryObjectEncoding(c->argv[2]);
-        dbAdd(c->db,c->argv[1],c->argv[2]);
+        c->argv[2] = tryObjectEncoding(c->argv[2]);//如果没有找到这个key 就创建一个值
+        dbAdd(c->db,c->argv[1],c->argv[2]);//数据库里面增加一个KEY VALUE
         incrRefCount(c->argv[2]);
-        totlen = stringObjectLen(c->argv[2]);
+        totlen = stringObjectLen(c->argv[2]);//获取字符串长度
     } else {
         /* Key exists, check type */
-        if (checkType(c,o,REDIS_STRING))
+        if (checkType(c,o,REDIS_STRING))//找到了 先验证下是不是字符串
             return;
 
         /* "append" is an argument, so always an sds */
         append = c->argv[2];
-        totlen = stringObjectLen(o)+sdslen(append->ptr);
-        if (checkStringLength(c,totlen) != REDIS_OK)
+        totlen = stringObjectLen(o)+sdslen(append->ptr);//新字符串的总长度
+        if (checkStringLength(c,totlen) != REDIS_OK)//新的字符串长度超过512M就跪了 返回客户端错误信息
             return;
 
         /* Append the value */
-        o = dbUnshareStringValue(c->db,c->argv[1],o);
-        o->ptr = sdscatlen(o->ptr,append->ptr,sdslen(append->ptr));
-        totlen = sdslen(o->ptr);
+        o = dbUnshareStringValue(c->db,c->argv[1],o);//因为要修改一个值，所以不能修改share对象的值，期望是不能影响别人
+        o->ptr = sdscatlen(o->ptr,append->ptr,sdslen(append->ptr));//附加字符串
+        totlen = sdslen(o->ptr);//字符串长度
     }
     signalModifiedKey(c->db,c->argv[1]);
     notifyKeyspaceEvent(REDIS_NOTIFY_STRING,"append",c->argv[1],c->db->id);

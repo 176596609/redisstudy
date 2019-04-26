@@ -263,17 +263,17 @@ void touchWatchedKey(redisDb *db, robj *key) {
     listIter li;
     listNode *ln;
 
-    if (dictSize(db->watched_keys) == 0) return;
-    clients = dictFetchValue(db->watched_keys, key);
-    if (!clients) return;
+    if (dictSize(db->watched_keys) == 0) return;//检查数据库上是否有被监控的key
+    clients = dictFetchValue(db->watched_keys, key);//获取监控这个key的client链表
+    if (!clients) return;//如果没有client监控这个key 那么返回
 
     /* Mark all the clients watching this key as REDIS_DIRTY_CAS */
     /* Check if we are already watching for this key */
-    listRewind(clients,&li);
-    while((ln = listNext(&li))) {
+    listRewind(clients,&li);//获取链表的正向迭代器
+    while((ln = listNext(&li))) {//遍历迭代器
         redisClient *c = listNodeValue(ln);
 
-        c->flags |= REDIS_DIRTY_CAS;
+        c->flags |= REDIS_DIRTY_CAS;//客户端标记为DIRTY
     }
 }
 

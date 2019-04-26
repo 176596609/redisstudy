@@ -882,7 +882,7 @@ unsigned char *ziplistFind(unsigned char *p, unsigned char *vstr, unsigned int v
 }
 
 /* Return length of ziplist. */
-unsigned int ziplistLen(unsigned char *zl) {
+unsigned int ziplistLen(unsigned char *zl) {//获取压缩列表的长度  注意如果压缩列表的长度过长的话必须遍历整个列表才能获得长度  效率退化成O(N)
     unsigned int len = 0;
     if (intrev16ifbe(ZIPLIST_LENGTH(zl)) < UINT16_MAX) {
         len = intrev16ifbe(ZIPLIST_LENGTH(zl));

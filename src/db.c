@@ -72,9 +72,9 @@ robj *lookupKeyRead(redisDb *db, robj *key) {
     return val;
 }
 
-robj *lookupKeyWrite(redisDb *db, robj *key) {
-    expireIfNeeded(db,key);
-    return lookupKey(db,key);
+robj *lookupKeyWrite(redisDb *db, robj *key) {//查找一个key
+    expireIfNeeded(db,key);//如果过期了就删除掉
+    return lookupKey(db,key);//查找key对应的value
 }
 
 robj *lookupKeyReadOrReply(redisClient *c, robj *key, robj *reply) {
@@ -201,13 +201,13 @@ int dbDelete(redisDb *db, robj *key) {
  * At this point the caller is ready to modify the object, for example
  * using an sdscat() call to append some data, or anything else.
  */
-robj *dbUnshareStringValue(redisDb *db, robj *key, robj *o) {
+robj *dbUnshareStringValue(redisDb *db, robj *key, robj *o) {//如果一个对象是共享的 那么毒品出一份来再修改，相当于写时复制，不要影响别人 一方面节约了内存 另一方面还能不影响别人
     redisAssert(o->type == REDIS_STRING);
     if (o->refcount != 1 || o->encoding != REDIS_ENCODING_RAW) {
         robj *decoded = getDecodedObject(o);
-        o = createRawStringObject(decoded->ptr, sdslen(decoded->ptr));
+        o = createRawStringObject(decoded->ptr, sdslen(decoded->ptr));//创建新的字符串空间
         decrRefCount(decoded);
-        dbOverwrite(db,key,o);
+        dbOverwrite(db,key,o);//重写 KEY对应的value
     }
     return o;
 }

@@ -36,10 +36,10 @@
 /* Check the argument length to see if it requires us to convert the ziplist
  * to a real list. Only check raw-encoded objects because integer encoded
  * objects are never too long. */
-void listTypeTryConversion(robj *subject, robj *value) {
-    if (subject->encoding != REDIS_ENCODING_ZIPLIST) return;
-    if (sdsEncodedObject(value) &&
-        sdslen(value->ptr) > server.list_max_ziplist_value)
+void listTypeTryConversion(robj *subject, robj *value) {//检查一下是否要把ziplist转换成linklist
+    if (subject->encoding != REDIS_ENCODING_ZIPLIST) return;//如果不是ziplist那么没必要进行转换了
+    if (sdsEncodedObject(value) &&//如果是字符串
+        sdslen(value->ptr) > server.list_max_ziplist_value)//而且字符串长度操作配置文件制定的长度  那么将ziplist转换成linklist
             listTypeConvert(subject,REDIS_ENCODING_LINKEDLIST);
 }
 
@@ -50,29 +50,29 @@ void listTypeTryConversion(robj *subject, robj *value) {
  * the function takes care of it if needed. */
 void listTypePush(robj *subject, robj *value, int where) {
     /* Check if we need to convert the ziplist */
-    listTypeTryConversion(subject,value);
+    listTypeTryConversion(subject,value);//检查一下是否要把ziplist转换成linklist
     if (subject->encoding == REDIS_ENCODING_ZIPLIST &&
-        ziplistLen(subject->ptr) >= server.list_max_ziplist_entries)
+        ziplistLen(subject->ptr) >= server.list_max_ziplist_entries)//如果压缩列表的长度增加到配置文件的上限，那么扩展为双端列表
             listTypeConvert(subject,REDIS_ENCODING_LINKEDLIST);
 
-    if (subject->encoding == REDIS_ENCODING_ZIPLIST) {
+    if (subject->encoding == REDIS_ENCODING_ZIPLIST) {//如果是压缩列表
         int pos = (where == REDIS_HEAD) ? ZIPLIST_HEAD : ZIPLIST_TAIL;
-        value = getDecodedObject(value);
+        value = getDecodedObject(value);//转换成sds字符串对象 临时使用
         subject->ptr = ziplistPush(subject->ptr,value->ptr,(unsigned int)sdslen(value->ptr),pos); WIN_PORT_FIX /* cast (unsigned int) */
-        decrRefCount(value);
-    } else if (subject->encoding == REDIS_ENCODING_LINKEDLIST) {
+        decrRefCount(value);//释放内存
+    } else if (subject->encoding == REDIS_ENCODING_LINKEDLIST) {//如果是双端列表
         if (where == REDIS_HEAD) {
-            listAddNodeHead(subject->ptr,value);
+            listAddNodeHead(subject->ptr,value);//往头部增加一个节点
         } else {
-            listAddNodeTail(subject->ptr,value);
+            listAddNodeTail(subject->ptr,value);//往尾部增加一个节点
         }
-        incrRefCount(value);
+        incrRefCount(value);//增加一个应用记数
     } else {
         redisPanic("Unknown list encoding");
     }
 }
 
-robj *listTypePop(robj *subject, int where) {
+robj *listTypePop(robj *subject, int where) {//列表对象弹出第一个或者最后一个对象  并在链表中删除该对象
     robj *value = NULL;
     if (subject->encoding == REDIS_ENCODING_ZIPLIST) {
         unsigned char *p;
@@ -109,18 +109,18 @@ robj *listTypePop(robj *subject, int where) {
     return value;
 }
 
-PORT_ULONG listTypeLength(robj *subject) {
+PORT_ULONG listTypeLength(robj *subject) {//列表对象的长度
     if (subject->encoding == REDIS_ENCODING_ZIPLIST) {
-        return ziplistLen(subject->ptr);
+        return ziplistLen(subject->ptr);//压缩列表的长度
     } else if (subject->encoding == REDIS_ENCODING_LINKEDLIST) {
-        return listLength((list*)subject->ptr);
+        return listLength((list*)subject->ptr);//获取列表的长度
     } else {
         redisPanic("Unknown list encoding");
     }
 }
 
 /* Initialize an iterator at the specified index. */
-listTypeIterator *listTypeInitIterator(robj *subject, PORT_LONG index, unsigned char direction) {
+listTypeIterator *listTypeInitIterator(robj *subject, PORT_LONG index, unsigned char direction) {//获取列表对象的迭代器
     listTypeIterator *li = zmalloc(sizeof(listTypeIterator));
     li->subject = subject;
     li->encoding = subject->encoding;
@@ -136,14 +136,14 @@ listTypeIterator *listTypeInitIterator(robj *subject, PORT_LONG index, unsigned 
 }
 
 /* Clean up the iterator. */
-void listTypeReleaseIterator(listTypeIterator *li) {
+void listTypeReleaseIterator(listTypeIterator *li) {//释放列表对象的迭代器
     zfree(li);
 }
 
 /* Stores pointer to current the entry in the provided entry structure
  * and advances the position of the iterator. Returns 1 when the current
  * entry is in fact an entry, 0 otherwise. */
-int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
+int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {//列表迭代器逐个获取元素
     /* Protect from converting when iterating */
     redisAssert(li->subject->encoding == li->encoding);
 
@@ -173,24 +173,24 @@ int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
 }
 
 /* Return entry or NULL at the current position of the iterator. */
-robj *listTypeGet(listTypeEntry *entry) {
+robj *listTypeGet(listTypeEntry *entry) {//获取链标当前迭代器 对应的值
     listTypeIterator *li = entry->li;
     robj *value = NULL;
-    if (li->encoding == REDIS_ENCODING_ZIPLIST) {
+    if (li->encoding == REDIS_ENCODING_ZIPLIST) {//如果是压缩列表
         unsigned char *vstr;
         unsigned int vlen;
         PORT_LONGLONG vlong;
-        redisAssert(entry->zi != NULL);
+        redisAssert(entry->zi != NULL);//指向压缩列表节点的指针
         if (ziplistGet(entry->zi,&vstr,&vlen,&vlong)) {
-            if (vstr) {
+            if (vstr) {//如果获取到的是个字符串 那么转成SDS字符串对象
                 value = createStringObject((char*)vstr,vlen);
             } else {
                 value = createStringObjectFromLongLong(vlong);
             }
         }
-    } else if (li->encoding == REDIS_ENCODING_LINKEDLIST) {
-        redisAssert(entry->ln != NULL);
-        value = listNodeValue(entry->ln);
+    } else if (li->encoding == REDIS_ENCODING_LINKEDLIST) {//如果是双端列表
+        redisAssert(entry->ln != NULL);//指向双端列表的指针
+        value = listNodeValue(entry->ln);//获取当前节点并返回
         incrRefCount(value);
     } else {
         redisPanic("Unknown list encoding");
@@ -198,12 +198,12 @@ robj *listTypeGet(listTypeEntry *entry) {
     return value;
 }
 
-void listTypeInsert(listTypeEntry *entry, robj *value, int where) {
+void listTypeInsert(listTypeEntry *entry, robj *value, int where) {//往列表某个节点前面后者后面中插入一个元素
     robj *subject = entry->li->subject;
     if (entry->li->encoding == REDIS_ENCODING_ZIPLIST) {
-        value = getDecodedObject(value);
-        if (where == REDIS_TAIL) {
-            unsigned char *next = ziplistNext(subject->ptr,entry->zi);
+        value = getDecodedObject(value);//转换成字符串 实际上sds是二进制安全的 所以value本身内容可以是任何数据  临时使用 一会儿会释放（减少应用记数）
+        if (where == REDIS_TAIL) {//往节点后面增加一个元素
+            unsigned char *next = ziplistNext(subject->ptr,entry->zi);//subject->ptr 指向压缩列表   entry->zi指向当前的迭代器
 
             /* When we insert after the current element, but the current element
              * is the tail of the list, we need to do a push. */
@@ -215,34 +215,34 @@ void listTypeInsert(listTypeEntry *entry, robj *value, int where) {
         } else {
             subject->ptr = ziplistInsert(subject->ptr,entry->zi,value->ptr,(unsigned int)sdslen(value->ptr)); WIN_PORT_FIX /* cast (unsigned int) */
         }
-        decrRefCount(value);
-    } else if (entry->li->encoding == REDIS_ENCODING_LINKEDLIST) {
+        decrRefCount(value);//释放内存（减少应用记数）
+    } else if (entry->li->encoding == REDIS_ENCODING_LINKEDLIST) {//当前列表对象的实现方式是双端列表
         if (where == REDIS_TAIL) {
-            listInsertNode(subject->ptr,entry->ln,value,AL_START_TAIL);
+            listInsertNode(subject->ptr,entry->ln,value,AL_START_TAIL);//subject->ptr 表示链表  entry->ln表示迭代器目前指向的对象  AL_START_TAIL表示往后面增加一个节点
         } else {
             listInsertNode(subject->ptr,entry->ln,value,AL_START_HEAD);
         }
-        incrRefCount(value);
+        incrRefCount(value);//增加一个引用计数
     } else {
         redisPanic("Unknown list encoding");
     }
 }
 
 /* Compare the given object with the entry at the current position. */
-int listTypeEqual(listTypeEntry *entry, robj *o) {
+int listTypeEqual(listTypeEntry *entry, robj *o) {//比较迭代器指向的对象和 第二个参数指向的对象是否一致
     listTypeIterator *li = entry->li;
     if (li->encoding == REDIS_ENCODING_ZIPLIST) {
         redisAssertWithInfo(NULL,o,sdsEncodedObject(o));
         return ziplistCompare(entry->zi,o->ptr,(unsigned int)sdslen(o->ptr));   WIN_PORT_FIX /* cast (unsigned int) */
     } else if (li->encoding == REDIS_ENCODING_LINKEDLIST) {
-        return equalStringObjects(o,listNodeValue(entry->ln));
+        return equalStringObjects(o,listNodeValue(entry->ln));//entry->ln表示迭代器目前指向的对象节点 entry->ln->value就是对象
     } else {
         redisPanic("Unknown list encoding");
     }
 }
 
 /* Delete the element pointed to. */
-void listTypeDelete(listTypeEntry *entry) {
+void listTypeDelete(listTypeEntry *entry) {//删除迭代器指向的对象  然后迭代器指向下一个（注意迭代器的方向）
     listTypeIterator *li = entry->li;
     if (li->encoding == REDIS_ENCODING_ZIPLIST) {
         unsigned char *p = entry->zi;
@@ -253,36 +253,36 @@ void listTypeDelete(listTypeEntry *entry) {
             li->zi = p;
         else
             li->zi = ziplistPrev(li->subject->ptr,p);
-    } else if (entry->li->encoding == REDIS_ENCODING_LINKEDLIST) {
+    } else if (entry->li->encoding == REDIS_ENCODING_LINKEDLIST) {//如果当前列表项是双端列表（迭代器的一个属性）
         listNode *next;
-        if (li->direction == REDIS_TAIL)
+        if (li->direction == REDIS_TAIL)//如果迭代器朝后  那么迭代器指向当前节点的下一个节点
             next = entry->ln->next;
         else
-            next = entry->ln->prev;
-        listDelNode(li->subject->ptr,entry->ln);
-        li->ln = next;
+            next = entry->ln->prev;//如果迭代器朝前  那么迭代器指向当前节点的上一个节点
+        listDelNode(li->subject->ptr,entry->ln);//li->subject->ptr 列表指针    指向被删除的节点 
+        li->ln = next;//迭代器指向下一个节点
     } else {
         redisPanic("Unknown list encoding");
     }
 }
 
-void listTypeConvert(robj *subject, int enc) {
+void listTypeConvert(robj *subject, int enc) {//将压缩列表转换成 双向节点链表
     listTypeIterator *li;
     listTypeEntry entry;
     redisAssertWithInfo(NULL,subject,subject->type == REDIS_LIST);
 
     if (enc == REDIS_ENCODING_LINKEDLIST) {
-        list *l = listCreate();
-        listSetFreeMethod(l,decrRefCountVoid);
+        list *l = listCreate();//新建一个双端链表
+        listSetFreeMethod(l,decrRefCountVoid);//设置减少对象引用计数的函数
 
         /* listTypeGet returns a robj with incremented refcount */
-        li = listTypeInitIterator(subject,0,REDIS_TAIL);
-        while (listTypeNext(li,&entry)) listAddNodeTail(l,listTypeGet(&entry));
-        listTypeReleaseIterator(li);
+        li = listTypeInitIterator(subject,0,REDIS_TAIL);//获取压缩列表的的迭代器
+        while (listTypeNext(li,&entry)) listAddNodeTail(l,listTypeGet(&entry));//将值加入新的列表尾部
+        listTypeReleaseIterator(li);//释放迭代器
 
-        subject->encoding = REDIS_ENCODING_LINKEDLIST;
-        zfree(subject->ptr);
-        subject->ptr = l;
+        subject->encoding = REDIS_ENCODING_LINKEDLIST;//改成双端列表对象
+        zfree(subject->ptr);//释放压缩列表对象
+        subject->ptr = l;//修正为新的链表对象
     } else {
         redisPanic("Unsupported list conversion");
     }
@@ -294,21 +294,21 @@ void listTypeConvert(robj *subject, int enc) {
 
 void pushGenericCommand(redisClient *c, int where) {
     int j, waiting = 0, pushed = 0;
-    robj *lobj = lookupKeyWrite(c->db,c->argv[1]);
+    robj *lobj = lookupKeyWrite(c->db,c->argv[1]);//查找要插入的列表
 
-    if (lobj && lobj->type != REDIS_LIST) {
+    if (lobj && lobj->type != REDIS_LIST) {//如果发现不是列表的话  那么就返回错误
         addReply(c,shared.wrongtypeerr);
         return;
     }
 
-    for (j = 2; j < c->argc; j++) {
+    for (j = 2; j < c->argc; j++) {//获取要添加的元素  可以添加多个
         c->argv[j] = tryObjectEncoding(c->argv[j]);
-        if (!lobj) {
+        if (!lobj) {//如果原来还没有这个列表 那么先创建一个压缩列表
             lobj = createZiplistObject();
-            dbAdd(c->db,c->argv[1],lobj);
+            dbAdd(c->db,c->argv[1],lobj);//压缩列表KEY VALUE 放入数据库
         }
-        listTypePush(lobj,c->argv[j],where);
-        pushed++;
+        listTypePush(lobj,c->argv[j],where);//元素插入链表后面
+        pushed++;//插入了多少个元素
     }
     addReplyLongLong(c, waiting + (lobj ? listTypeLength(lobj) : 0));
     if (pushed) {
@@ -324,7 +324,7 @@ void lpushCommand(redisClient *c) {
     pushGenericCommand(c,REDIS_HEAD);
 }
 
-void rpushCommand(redisClient *c) {
+void rpushCommand(redisClient *c) {//列表中添加一项 尾部追加
     pushGenericCommand(c,REDIS_TAIL);
 }
 
@@ -404,8 +404,8 @@ void linsertCommand(redisClient *c) {
 }
 
 void llenCommand(redisClient *c) {
-    robj *o = lookupKeyReadOrReply(c,c->argv[1],shared.czero);
-    if (o == NULL || checkType(c,o,REDIS_LIST)) return;
+    robj *o = lookupKeyReadOrReply(c,c->argv[1],shared.czero);//查找元素
+    if (o == NULL || checkType(c,o,REDIS_LIST)) return;//如果找不到 或者 找到了不是链表  反馈客户端错误
     addReplyLongLong(c,listTypeLength(o));
 }
 

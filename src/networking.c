@@ -512,7 +512,7 @@ void addReplyLongLong(redisClient *c, PORT_LONGLONG ll) {
     else if (ll == 1)
         addReply(c,shared.cone);
     else
-        addReplyLongLongWithPrefix(c,ll,':');
+        addReplyLongLongWithPrefix(c,ll,':');//´ð¸´ll Ôö¼ÓÇ°×º":"
 }
 
 void addReplyMultiBulkLen(redisClient *c, PORT_LONG length) {
