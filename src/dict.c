@@ -332,7 +332,7 @@ int dictRehashMilliseconds(dict *d, int ms) {//rehash ms毫秒，前提是表正在rehash
  * dictionary so that the hash table automatically migrates from H1 to H2
  * while it is actively used. */
 static void _dictRehashStep(dict *d) {//执行一步rehash
-    if (d->iterators == 0) dictRehash(d,1);//第二个参数指明执行一个slot的rehash
+    if (d->iterators == 0) dictRehash(d,1);//第二个参数指明执行一个slot的rehash  如果有安全迭代器时不可以进行rehash
 }
 
 /* Add an element to the target hash table */
@@ -537,7 +537,7 @@ void *dictFetchValue(dict *d, const void *key) {//获取字典里面的一个key对应的值
  * the fingerprint again when the iterator is released.
  * If the two fingerprints are different it means that the user of the iterator
  * performed forbidden operations against the dictionary while iterating. */
-PORT_LONGLONG dictFingerprint(dict *d) {
+PORT_LONGLONG dictFingerprint(dict *d) {//计算哈希表的一个指纹  
     PORT_LONGLONG integers[6], hash = 0;
     int j;
 
@@ -569,7 +569,7 @@ PORT_LONGLONG dictFingerprint(dict *d) {
     return hash;
 }
 
-dictIterator *dictGetIterator(dict *d)
+dictIterator *dictGetIterator(dict *d)//哈希表的迭代器
 {
     dictIterator *iter = zmalloc(sizeof(*iter));
 
@@ -582,7 +582,7 @@ dictIterator *dictGetIterator(dict *d)
     return iter;
 }
 
-dictIterator *dictGetSafeIterator(dict *d) {
+dictIterator *dictGetSafeIterator(dict *d) {//哈希表的安全迭代器
     dictIterator *i = dictGetIterator(d);
 
     i->safe = 1;
@@ -592,27 +592,27 @@ dictIterator *dictGetSafeIterator(dict *d) {
 dictEntry *dictNext(dictIterator *iter)
 {
     while (1) {
-        if (iter->entry == NULL) {
-            dictht *ht = &iter->d->ht[iter->table];
+        if (iter->entry == NULL) {//迭代器指向的第一个值是空
+            dictht *ht = &iter->d->ht[iter->table];//获取当前正在遍历的哈希表  渐进式哈希表有两个哈希表
             if (iter->index == -1 && iter->table == 0) {
                 if (iter->safe)
                     iter->d->iterators++;
                 else
-                    iter->fingerprint = dictFingerprint(iter->d);
+                    iter->fingerprint = dictFingerprint(iter->d);//计算哈希表的指纹 一个哈希值
             }
-            iter->index++;
-            if (iter->index >= (PORT_LONG) ht->size) {
-                if (dictIsRehashing(iter->d) && iter->table == 0) {
-                    iter->table++;
-                    iter->index = 0;
-                    ht = &iter->d->ht[1];
+            iter->index++;//第一个循环 index=0  表示查看第一个slot
+            if (iter->index >= (PORT_LONG) ht->size) {//如果第一个哈希表所有slot已经遍历完了
+                if (dictIsRehashing(iter->d) && iter->table == 0) {//如果正在rehash 那么开始遍历第二个哈希表
+                    iter->table++;//遍历第二个哈希表
+                    iter->index = 0;//第二个哈希表的第一个slot
+                    ht = &iter->d->ht[1];//得到第二个哈希表
                 } else {
-                    break;
+                    break;//第二个哈希表（大多数情况下第二个哈希表根本不存在）都遍历结束了  退出整个for循环
                 }
             }
-            iter->entry = ht->table[iter->index];
+            iter->entry = ht->table[iter->index];//获取当前哈希表的当前slot的第一个节点 iter->entry
         } else {
-            iter->entry = iter->nextEntry;
+            iter->entry = iter->nextEntry;//下一个节点
         }
         if (iter->entry) {
             /* We need to save the 'next' here, the iterator user

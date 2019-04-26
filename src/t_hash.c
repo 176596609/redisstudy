@@ -37,16 +37,16 @@
 /* Check the length of a number of objects to see if we need to convert a
  * ziplist to a real hash. Note that we only check string encoded objects
  * as their string length can be queried in constant time. */
-void hashTypeTryConversion(robj *o, robj **argv, int start, int end) {
+void hashTypeTryConversion(robj *o, robj **argv, int start, int end) {//检查一些对象的长度，看看我们是否需要转换ziplist到真正的哈希。 请注意，我们只检查字符串编码对象 因为他们的字符串长度可以在恒定的时间内查询。
     int i;
 
-    if (o->encoding != REDIS_ENCODING_ZIPLIST) return;
+    if (o->encoding != REDIS_ENCODING_ZIPLIST) return;//如果已经不是压缩列表了 返回
 
-    for (i = start; i <= end; i++) {
+    for (i = start; i <= end; i++) {//检查KEY和value是不是已经超过了限制 是的话就转换成真正的哈希表
         if (sdsEncodedObject(argv[i]) &&
             sdslen(argv[i]->ptr) > server.hash_max_ziplist_value)
         {
-            hashTypeConvert(o, REDIS_ENCODING_HT);
+            hashTypeConvert(o, REDIS_ENCODING_HT);//转换成真正的哈希表
             break;
         }
     }
@@ -282,7 +282,7 @@ hashTypeIterator *hashTypeInitIterator(robj *subject) {
         hi->fptr = NULL;
         hi->vptr = NULL;
     } else if (hi->encoding == REDIS_ENCODING_HT) {
-        hi->di = dictGetIterator(subject->ptr);
+        hi->di = dictGetIterator(subject->ptr);//获取哈希表的迭代器
     } else {
         redisPanic("Unknown hash encoding");
     }
@@ -393,7 +393,7 @@ robj *hashTypeCurrentObject(hashTypeIterator *hi, int what) {
     return dst;
 }
 
-robj *hashTypeLookupWriteOrCreate(redisClient *c, robj *key) {
+robj *hashTypeLookupWriteOrCreate(redisClient *c, robj *key) {//查找一个哈希表对象 如果不存在就创建一个  如果对象已经存在了 但是不是哈希对象 那么给客户端返回错误提示
     robj *o = lookupKeyWrite(c->db,key);
     if (o == NULL) {
         o = createHashObject();
@@ -418,8 +418,8 @@ void hashTypeConvertZiplist(robj *o, int enc) {
         dict *dict;
         int ret;
 
-        hi = hashTypeInitIterator(o);
-        dict = dictCreate(&hashDictType, NULL);
+        hi = hashTypeInitIterator(o);//初始化迭代器 实际上这个就是压缩列表的迭代器
+        dict = dictCreate(&hashDictType, NULL);//创建一个新的哈希表
 
         while (hashTypeNext(hi) != REDIS_ERR) {
             robj *field, *value;
@@ -449,7 +449,7 @@ void hashTypeConvertZiplist(robj *o, int enc) {
 
 void hashTypeConvert(robj *o, int enc) {
     if (o->encoding == REDIS_ENCODING_ZIPLIST) {
-        hashTypeConvertZiplist(o, enc);
+        hashTypeConvertZiplist(o, enc);//将ziplist转换成hash表
     } else if (o->encoding == REDIS_ENCODING_HT) {
         redisPanic("Not implemented");
     } else {
@@ -465,7 +465,7 @@ void hsetCommand(redisClient *c) {
     int update;
     robj *o;
 
-    if ((o = hashTypeLookupWriteOrCreate(c,c->argv[1])) == NULL) return;
+    if ((o = hashTypeLookupWriteOrCreate(c,c->argv[1])) == NULL) return;//查找一个哈希表对象 如果不存在就创建一个  如果对象已经存在了 但是不是哈希对象 那么给客户端返回错误提示
     hashTypeTryConversion(o,c->argv,2,3);
     hashTypeTryObjectEncoding(o,&c->argv[2], &c->argv[3]);
     update = hashTypeSet(o,c->argv[2],c->argv[3]);

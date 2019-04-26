@@ -81,7 +81,7 @@ typedef struct dict {
     void *privdata;//私有数据
     dictht ht[2];//为了实现渐进式哈希表 所以用了两个哈希表
     PORT_LONG rehashidx; /* rehashing not in progress if rehashidx == -1 渐进式hash的进度*/
-    int iterators; /* number of iterators currently running */
+    int iterators; /* number of iterators currently running目前正在运行的安全迭代器的数量 字典不存在安全迭代器时才能rehash*/
 } dict;
 
 /* If safe is set to 1 this is a safe iterator, that means, you can call
@@ -89,12 +89,12 @@ typedef struct dict {
  * iterating. Otherwise it is a non safe iterator, and only dictNext()
  * should be called while iterating. */
 typedef struct dictIterator {
-    dict *d;
-    PORT_LONG index;
-    int table, safe;
-    dictEntry *entry, *nextEntry;
+    dict *d;//哈希字典
+    PORT_LONG index;//表示遍历到第几个slot了
+    int table, safe;//table表示0或者1表示正在遍历那个ht
+    dictEntry *entry, *nextEntry;//entry 迭代器当前指向的节点  nextEntry迭代器即将获取的下一个节点
     /* unsafe iterator fingerprint for misuse detection. */
-    PORT_LONGLONG fingerprint;
+    PORT_LONGLONG fingerprint;//哈希表指纹
 } dictIterator;
 
 typedef void (dictScanFunction)(void *privdata, const dictEntry *de);

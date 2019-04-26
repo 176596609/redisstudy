@@ -215,7 +215,7 @@ robj *createIntsetObject(void) {//创建一个整数集合对象
     return o;
 }
 
-robj *createHashObject(void) {//创建一个压缩列表对象
+robj *createHashObject(void) {//创建一个压缩列表hash对象
     unsigned char *zl = ziplistNew();
     robj *o = createObject(REDIS_HASH, zl);
     o->encoding = REDIS_ENCODING_ZIPLIST;
