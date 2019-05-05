@@ -225,10 +225,10 @@ PORT_LONGLONG emptyDb(void(callback)(void*)) {
     return removed;
 }
 
-int selectDb(redisClient *c, int id) {
+int selectDb(redisClient *c, int id) {//选择一个数据库
     if (id < 0 || id >= server.dbnum)
         return REDIS_ERR;
-    c->db = &server.db[id];
+    c->db = &server.db[id];//选择正确的数据库
     return REDIS_OK;
 }
 
@@ -253,13 +253,13 @@ void signalFlushedDb(int dbid) {
  * Type agnostic commands operating on the key space
  *----------------------------------------------------------------------------*/
 
-void flushdbCommand(redisClient *c) {
-    server.dirty += dictSize(c->db->dict);
-    signalFlushedDb(c->db->id);
-    dictEmpty(c->db->dict,NULL);
-    dictEmpty(c->db->expires,NULL);
+void flushdbCommand(redisClient *c) {//清空当前客户端连接的数据库
+    server.dirty += dictSize(c->db->dict);//当前数据库有多少个key
+    signalFlushedDb(c->db->id);//当前所有watch当前数据库的client标记了dirty
+    dictEmpty(c->db->dict,NULL);//清空当前数据库的字典
+    dictEmpty(c->db->expires,NULL);//清空当前超期key的记录
     if (server.cluster_enabled) slotToKeyFlush();
-    addReply(c,shared.ok);
+    addReply(c,shared.ok);//应答终端清空成功
 }
 
 void flushallCommand(redisClient *c) {
@@ -284,7 +284,7 @@ void flushallCommand(redisClient *c) {
     server.dirty++;
 }
 
-void delCommand(redisClient *c) {
+void delCommand(redisClient *c) {//DEL KEY_NAME
     int deleted = 0, j;
 
     for (j = 1; j < c->argc; j++) {
@@ -316,7 +316,7 @@ void existsCommand(redisClient *c) {
 void selectCommand(redisClient *c) {
     PORT_LONG id;
 
-    if (getLongFromObjectOrReply(c, c->argv[1], &id,
+    if (getLongFromObjectOrReply(c, c->argv[1], &id,//获取要选择数据库的ID
         "invalid DB index") != REDIS_OK)
         return;
 

@@ -734,7 +734,7 @@ void objectCommand(redisClient *c) {
         if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))//查看该key是否存在，不存在直接答复终端
                 == NULL) return;
         addReplyBulkCString(c,strEncoding(o->encoding));
-    } else if (!strcasecmp(c->argv[1]->ptr,"idletime") && c->argc == 3) {
+    } else if (!strcasecmp(c->argv[1]->ptr,"idletime") && c->argc == 3) {//查看一个KEY的空转时间  换句话说 多久没有人访问这个key了
         if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))
                 == NULL) return;
         addReplyLongLong(c,estimateObjectIdleTime(o)/1000);

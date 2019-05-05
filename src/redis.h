@@ -476,7 +476,7 @@ struct evictionPoolEntry {
  * by integers from 0 (the default database) up to the max configured
  * database. The database number is the 'id' field in the structure. */
 typedef struct redisDb {
-    dict *dict;                 /* The keyspace for this DB */
+    dict *dict;                 /* The keyspace for this DB */ //数据库空间 保存着数据库中的所有键值对
     dict *expires;              /* Timeout of keys with a timeout set */
     dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP) */
     dict *ready_keys;           /* Blocked keys that received a PUSH */
@@ -539,7 +539,7 @@ typedef struct readyList {
 typedef struct redisClient {
     uint64_t id;            /* Client incremental unique ID. */
     int fd;
-    redisDb *db;
+    redisDb *db;//当前客户端选择的数据库
     int dictid;
     robj *name;             /* As set by CLIENT SETNAME */
     sds querybuf;
@@ -680,7 +680,7 @@ struct redisServer {
     pid_t pid;                  /* Main process pid. */
     char *configfile;           /* Absolute config file path, or NULL */
     int hz;                     /* serverCron() calls frequency in hertz */
-    redisDb *db;
+    redisDb *db;//一个数组，保存着服务器中的所有数据库
     dict *commands;             /* Command table */
     dict *orig_commands;        /* Command table before command renaming. */
     aeEventLoop *el;
@@ -1360,7 +1360,7 @@ robj *dbRandomKey(redisDb *db);
 int dbDelete(redisDb *db, robj *key);
 robj *dbUnshareStringValue(redisDb *db, robj *key, robj *o);
 PORT_LONGLONG emptyDb(void(callback)(void*));
-int selectDb(redisClient *c, int id);
+int selectDb(redisClient *c, int id);//选择一个数据库
 void signalModifiedKey(redisDb *db, robj *key);
 void signalFlushedDb(int dbid);
 unsigned int getKeysInSlot(unsigned int hashslot, robj **keys, unsigned int count);

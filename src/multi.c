@@ -286,18 +286,18 @@ void touchWatchedKeysOnFlush(int dbid) {
     listNode *ln;
 
     /* For every client, check all the waited keys */
-    listRewind(server.clients,&li1);
+    listRewind(server.clients,&li1);//存活的客户端连接（不包括正在关闭的客户端）
     while((ln = listNext(&li1))) {
-        redisClient *c = listNodeValue(ln);
-        listRewind(c->watched_keys,&li2);
+        redisClient *c = listNodeValue(ln);//取出一个客户端
+        listRewind(c->watched_keys,&li2);//取出客户端watch的Key列表
         while((ln = listNext(&li2))) {
-            watchedKey *wk = listNodeValue(ln);
+            watchedKey *wk = listNodeValue(ln);//取出一个列表节点，查看KEY值
 
             /* For every watched key matching the specified DB, if the
              * key exists, mark the client as dirty, as the key will be
              * removed. */
-            if (dbid == -1 || wk->db->id == dbid) {
-                if (dictFind(wk->db->dict, wk->key->ptr) != NULL)
+            if (dbid == -1 || wk->db->id == dbid) {//查看watch 数据库的id是否和删除的数据库ID一致  一致的话进一步看 被删除的数据库里面有没有这个KEY
+                if (dictFind(wk->db->dict, wk->key->ptr) != NULL)//被删除的数据库里面有这个KEY，标记为DIRTY
                     c->flags |= REDIS_DIRTY_CAS;
             }
         }

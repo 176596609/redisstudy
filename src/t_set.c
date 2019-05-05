@@ -38,31 +38,31 @@ void sunionDiffGenericCommand(redisClient *c, robj **setkeys, int setnum, robj *
 /* Factory method to return a set that *can* hold "value". When the object has
  * an integer-encodable value, an intset will be returned. Otherwise a regular
  * hash table. */
-robj *setTypeCreate(robj *value) {
-    if (isObjectRepresentableAsLongLong(value,NULL) == REDIS_OK)
+robj *setTypeCreate(robj *value) {//创建一个集合  根据c->argv[2]的值来决定创建int set 还是hash set
+    if (isObjectRepresentableAsLongLong(value,NULL) == REDIS_OK)//如果c->argv[2]是个数字 那么创建为整数集合 
         return createIntsetObject();
-    return createSetObject();
+    return createSetObject();//否则创建为hash 集合
 }
 
-int setTypeAdd(robj *subject, robj *value) {
+int setTypeAdd(robj *subject, robj *value) {//集合里面增加一项  集合可能是整形集合（排序了的，查找挺快）  集合也可能适合hashset
     PORT_LONGLONG llval;
     if (subject->encoding == REDIS_ENCODING_HT) {
-        if (dictAdd(subject->ptr,value,NULL) == DICT_OK) {
+        if (dictAdd(subject->ptr,value,NULL) == DICT_OK) {//集合里面增加一项
             incrRefCount(value);
             return 1;
         }
-    } else if (subject->encoding == REDIS_ENCODING_INTSET) {
+    } else if (subject->encoding == REDIS_ENCODING_INTSET) {//如果是个整形集合
         if (isObjectRepresentableAsLongLong(value,&llval) == REDIS_OK) {
             uint8_t success = 0;
-            subject->ptr = intsetAdd(subject->ptr,llval,&success);
+            subject->ptr = intsetAdd(subject->ptr,llval,&success);//本身内部就存在升级的可能性
             if (success) {
                 /* Convert to regular set when the intset contains
                  * too many entries. */
-                if (intsetLen(subject->ptr) > server.set_max_intset_entries)
+                if (intsetLen(subject->ptr) > server.set_max_intset_entries)//如果整形集合中包含太多元素，那么转换成hash集合
                     setTypeConvert(subject,REDIS_ENCODING_HT);
                 return 1;
             }
-        } else {
+        } else {//新增的东东不是一个数字 那么将整形集合转换成 hash集合
             /* Failed to get integer from object, convert to regular set. */
             setTypeConvert(subject,REDIS_ENCODING_HT);
 
@@ -111,14 +111,14 @@ int setTypeIsMember(robj *subject, robj *value) {
     return 0;
 }
 
-setTypeIterator *setTypeInitIterator(robj *subject) {
+setTypeIterator *setTypeInitIterator(robj *subject) {//获取集合的迭代器
     setTypeIterator *si = zmalloc(sizeof(setTypeIterator));
     si->subject = subject;
     si->encoding = subject->encoding;
     if (si->encoding == REDIS_ENCODING_HT) {
-        si->di = dictGetIterator(subject->ptr);
+        si->di = dictGetIterator(subject->ptr);//获取哈希表的迭代器
     } else if (si->encoding == REDIS_ENCODING_INTSET) {
-        si->ii = 0;
+        si->ii = 0;//获取intset的迭代器
     } else {
         redisPanic("Unknown set encoding");
     }
@@ -144,11 +144,11 @@ void setTypeReleaseIterator(setTypeIterator *si) {
  * copy on write friendly. */
 int setTypeNext(setTypeIterator *si, robj **objele, int64_t *llele) {
     if (si->encoding == REDIS_ENCODING_HT) {
-        dictEntry *de = dictNext(si->di);
+        dictEntry *de = dictNext(si->di);//获取哈希表的下一项 迭代器指针内部会修改
         if (de == NULL) return -1;
         *objele = dictGetKey(de);
     } else if (si->encoding == REDIS_ENCODING_INTSET) {
-        if (!intsetGet(si->subject->ptr,si->ii++,llele))
+        if (!intsetGet(si->subject->ptr,si->ii++,llele))//获取整形集合中迭代器中的值  迭代器后移一位
             return -1;
     }
     return si->encoding;
@@ -218,24 +218,24 @@ PORT_ULONG setTypeSize(robj *subject) {
 /* Convert the set to specified encoding. The resulting dict (when converting
  * to a hash table) is presized to hold the number of elements in the original
  * set. */
-void setTypeConvert(robj *setobj, int enc) {
+void setTypeConvert(robj *setobj, int enc) {//将整形set转换为hash set
     setTypeIterator *si;
     redisAssertWithInfo(NULL,setobj,setobj->type == REDIS_SET &&
                              setobj->encoding == REDIS_ENCODING_INTSET);
 
     if (enc == REDIS_ENCODING_HT) {
         int64_t intele;
-        dict *d = dictCreate(&setDictType,NULL);
+        dict *d = dictCreate(&setDictType,NULL);//创建一个字典
         robj *element;
 
         /* Presize the dict to avoid rehashing */
-        dictExpand(d,intsetLen(setobj->ptr));
+        dictExpand(d,intsetLen(setobj->ptr));//将字典大小设置为  intsetLen ps:里面会扩大大小 来避免rehash
 
         /* To add the elements we extract integers and create redis objects */
         si = setTypeInitIterator(setobj);
         while (setTypeNext(si,NULL,&intele) != -1) {
-            element = createStringObjectFromLongLong(intele);
-            redisAssertWithInfo(NULL,element,dictAdd(d,element,NULL) == DICT_OK);
+            element = createStringObjectFromLongLong(intele);//将整形转换成字符串
+            redisAssertWithInfo(NULL,element,dictAdd(d,element,NULL) == DICT_OK);//添加到哈希表里面
         }
         setTypeReleaseIterator(si);
 
@@ -247,13 +247,13 @@ void setTypeConvert(robj *setobj, int enc) {
     }
 }
 
-void saddCommand(redisClient *c) {
+void saddCommand(redisClient *c) {//增加一个集合
     robj *set;
     int j, added = 0;
 
-    set = lookupKeyWrite(c->db,c->argv[1]);
-    if (set == NULL) {
-        set = setTypeCreate(c->argv[2]);
+    set = lookupKeyWrite(c->db,c->argv[1]);//查看这个集合是否已经存在了   SADD KEY_NAME VALUE1..VALUEN
+    if (set == NULL) {//如果这个集合不存在
+        set = setTypeCreate(c->argv[2]);//创建一个集合  根据c->argv[2]的值来决定创建int set 还是hash set
         dbAdd(c->db,c->argv[1],set);
     } else {
         if (set->type != REDIS_SET) {
@@ -262,9 +262,9 @@ void saddCommand(redisClient *c) {
         }
     }
 
-    for (j = 2; j < c->argc; j++) {
+    for (j = 2; j < c->argc; j++) {//集合查找或者创建成功,逐个将元素加入集合
         c->argv[j] = tryObjectEncoding(c->argv[j]);
-        if (setTypeAdd(set,c->argv[j])) added++;
+        if (setTypeAdd(set,c->argv[j])) added++;//集合里面增加一项
     }
     if (added) {
         signalModifiedKey(c->db,c->argv[1]);

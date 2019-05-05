@@ -625,7 +625,7 @@ static void addHashFieldToReply(redisClient *c, robj *o, robj *field) {
 void hgetCommand(redisClient *c) {
     robj *o;
 
-    if ((o = lookupKeyReadOrReply(c,c->argv[1],shared.nullbulk)) == NULL ||
+    if ((o = lookupKeyReadOrReply(c,c->argv[1],shared.nullbulk)) == NULL ||//找到KEY 对应的value  value是个哈希表（底层可能是个压缩列表或者是个哈希表）
         checkType(c,o,REDIS_HASH)) return;
 
     addHashFieldToReply(c, o, c->argv[2]);

@@ -1859,7 +1859,7 @@ void initServer(void) {
     }
 
     /* Create the Redis databases, and initialize other internal state. */
-    for (j = 0; j < server.dbnum; j++) {
+    for (j = 0; j < server.dbnum; j++) {//创建dbnum个数据库
         server.db[j].dict = dictCreate(&dbDictType,NULL);
         server.db[j].expires = dictCreate(&keyptrDictType,NULL);
         server.db[j].blocking_keys = dictCreate(&keylistDictType,NULL);
