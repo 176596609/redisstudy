@@ -477,10 +477,10 @@ struct evictionPoolEntry {
  * database. The database number is the 'id' field in the structure. */
 typedef struct redisDb {
     dict *dict;                 /* The keyspace for this DB */ //数据库空间 保存着数据库中的所有键值对
-    dict *expires;              /* Timeout of keys with a timeout set */
+    dict *expires;              /* Timeout of keys with a timeout set */ //过期字典
     dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP) */
     dict *ready_keys;           /* Blocked keys that received a PUSH */
-    dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
+    dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS *///事务将考虑过的键
     struct evictionPoolEntry *eviction_pool;    /* Eviction pool of keys */
     int id;                     /* Database ID */
     PORT_LONGLONG avg_ttl;          /* Average TTL, just for stats */
@@ -798,7 +798,7 @@ struct redisServer {
                                       to child process. */
     sds aof_child_diff;             /* AOF diff accumulator child side. */
     /* RDB persistence */
-    PORT_LONGLONG dirty;                /* Changes to DB from the last save */
+    PORT_LONGLONG dirty;                /* Changes to DB from the last save */  //如果服务器修改一个键 那么就会自增这个键 这个记数可能会触发持久化或者复制操作
     PORT_LONGLONG dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
     pid_t rdb_child_pid;            /* PID of RDB saving child */
     struct saveparam *saveparams;   /* Save points array for RDB */

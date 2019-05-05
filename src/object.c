@@ -700,7 +700,7 @@ PORT_ULONGLONG estimateObjectIdleTime(robj *o) {//获取一个对象的空转时间
     if (lruclock >= o->lru) {
         return (lruclock - o->lru) * REDIS_LRU_CLOCK_RESOLUTION;
     } else {
-        return (lruclock + (REDIS_LRU_CLOCK_MAX - o->lru)) *
+        return (lruclock + (REDIS_LRU_CLOCK_MAX - o->lru)) *//这个相当于时钟绕圈了么？  
                     REDIS_LRU_CLOCK_RESOLUTION;
     }
 }
@@ -737,7 +737,7 @@ void objectCommand(redisClient *c) {
     } else if (!strcasecmp(c->argv[1]->ptr,"idletime") && c->argc == 3) {//查看一个KEY的空转时间  换句话说 多久没有人访问这个key了
         if ((o = objectCommandLookupOrReply(c,c->argv[2],shared.nullbulk))
                 == NULL) return;
-        addReplyLongLong(c,estimateObjectIdleTime(o)/1000);
+        addReplyLongLong(c,estimateObjectIdleTime(o)/1000);//每个对象都有一个LRU属性
     } else {
         addReplyError(c,"Syntax error. Try OBJECT (refcount|encoding|idletime)");
     }

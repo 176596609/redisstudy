@@ -131,7 +131,7 @@ void setKey(redisDb *db, robj *key, robj *val) {
     signalModifiedKey(db,key);
 }
 
-int dbExists(redisDb *db, robj *key) {
+int dbExists(redisDb *db, robj *key) {//哈希表中查找某个KEY是否存在
     return dictFind(db->dict,key->ptr) != NULL;
 }
 
@@ -302,7 +302,7 @@ void delCommand(redisClient *c) {//DEL KEY_NAME
 
 /* EXISTS key1 key2 ... key_N.
  * Return value is the number of keys existing. */
-void existsCommand(redisClient *c) {
+void existsCommand(redisClient *c) {// EXISTS key1 key2 ... key_N.  返回存在的KEY的个数
     PORT_LONGLONG count = 0;
     int j;
 
@@ -344,23 +344,23 @@ void randomkeyCommand(redisClient *c) {
     decrRefCount(key);
 }
 
-void keysCommand(redisClient *c) {
+void keysCommand(redisClient *c) {//获得符合条件的KEY 可以使用正则表达式
     dictIterator *di;
     dictEntry *de;
-    sds pattern = c->argv[1]->ptr;
+    sds pattern = c->argv[1]->ptr;//获取正则表达式 可以为空
     int plen = (int)sdslen(pattern), allkeys;
     PORT_ULONG numkeys = 0;
     void *replylen = addDeferredMultiBulkLength(c);
 
-    di = dictGetSafeIterator(c->db->dict);
-    allkeys = (pattern[0] == '*' && pattern[1] == '\0');
+    di = dictGetSafeIterator(c->db->dict);//获取当前数据库字典的迭代器
+    allkeys = (pattern[0] == '*' && pattern[1] == '\0');//看是否是全匹配 
     while((de = dictNext(di)) != NULL) {
         sds key = dictGetKey(de);
         robj *keyobj;
 
-        if (allkeys || stringmatchlen(pattern,plen,key,(int)sdslen(key),0)) {
-            keyobj = createStringObject(key,sdslen(key));
-            if (expireIfNeeded(c->db,keyobj) == 0) {
+        if (allkeys || stringmatchlen(pattern,plen,key,(int)sdslen(key),0)) {//如果不是全匹配 那么检查看能否匹配正则
+            keyobj = createStringObject(key,sdslen(key));//获取匹配的KEY，并且生成字符串对象
+            if (expireIfNeeded(c->db,keyobj) == 0) {//检查当前字符串对象是否已经过期 是的话删除
                 addReplyBulk(c,keyobj);
                 numkeys++;
             }
@@ -616,8 +616,8 @@ void scanCommand(redisClient *c) {
     scanGenericCommand(c,NULL,cursor);
 }
 
-void dbsizeCommand(redisClient *c) {
-    addReplyLongLong(c,dictSize(c->db->dict));
+void dbsizeCommand(redisClient *c) {//O(1)搞定
+    addReplyLongLong(c,dictSize(c->db->dict));//DBSIZE 其实就是当前数据库字典里面KEY的个数
 }
 
 void lastsaveCommand(redisClient *c) {
@@ -784,14 +784,14 @@ int removeExpire(redisDb *db, robj *key) {
     return dictDelete(db->expires,key->ptr) == DICT_OK;
 }
 
-void setExpire(redisDb *db, robj *key, PORT_LONGLONG when) {
+void setExpire(redisDb *db, robj *key, PORT_LONGLONG when) {//设置key的过期时间
     dictEntry *kde, *de;
 
     /* Reuse the sds from the main dict in the expire dict */
     kde = dictFind(db->dict,key->ptr);
     redisAssertWithInfo(NULL,key,kde != NULL);
     de = dictReplaceRaw(db->expires,dictGetKey(kde));
-    dictSetSignedIntegerVal(de,when);
+    dictSetSignedIntegerVal(de,when);//设置超时时间
 }
 
 /* Return the expire time of the specified key, or -1 if no expire
@@ -817,7 +817,7 @@ PORT_LONGLONG getExpire(redisDb *db, robj *key) {
  * AOF and the master->slave link guarantee operation ordering, everything
  * will be consistent even if we allow write operations against expiring
  * keys. */
-void propagateExpire(redisDb *db, robj *key) {
+void propagateExpire(redisDb *db, robj *key) {//一个键被删除，那么这个键要在AOF文件里面删除 备份slave里面也要删除
     robj *argv[2];
 
     argv[0] = shared.del;
@@ -834,7 +834,7 @@ void propagateExpire(redisDb *db, robj *key) {
 }
 
 int expireIfNeeded(redisDb *db, robj *key) {//检查key是否已经过期 是的话就删掉
-    mstime_t when = getExpire(db,key);
+    mstime_t when = getExpire(db,key);//获取该键是否设置了过期时间
     mstime_t now;
 
     if (when < 0) return 0; /* No expire for this key */
@@ -847,7 +847,7 @@ int expireIfNeeded(redisDb *db, robj *key) {//检查key是否已经过期 是的话就删掉
      * only the first time it is accessed and not in the middle of the
      * script execution, making propagation to slaves / AOF consistent.
      * See issue #1525 on Github for more information. */
-    now = server.lua_caller ? server.lua_time_start : mstime();
+    now = server.lua_caller ? server.lua_time_start : mstime();//如果是lua调用那么获取lua调用的时间点 否则获取现在的时间戳
 
     /* If we are running in the context of a slave, return ASAP:
      * the slave key expiration is controlled by the master that will
@@ -856,7 +856,7 @@ int expireIfNeeded(redisDb *db, robj *key) {//检查key是否已经过期 是的话就删掉
      * Still we try to return the right information to the caller,
      * that is, 0 if we think the key should be still valid, 1 if
      * we think the key is expired at this time. */
-    if (server.masterhost != NULL) return now > when;
+    if (server.masterhost != NULL) return now > when;//没有过期 不删除
 
     /* Return when this key has not expired */
     if (now <= when) return 0;
@@ -866,7 +866,7 @@ int expireIfNeeded(redisDb *db, robj *key) {//检查key是否已经过期 是的话就删掉
     propagateExpire(db,key);
     notifyKeyspaceEvent(REDIS_NOTIFY_EXPIRED,
         "expired",key,db->id);
-    return dbDelete(db,key);
+    return dbDelete(db,key);//删除key
 }
 
 /*-----------------------------------------------------------------------------
@@ -884,14 +884,14 @@ void expireGenericCommand(redisClient *c, PORT_LONGLONG basetime, int unit) {
     robj *key = c->argv[1], *param = c->argv[2];
     PORT_LONGLONG when; /* unix time in milliseconds when the key will expire. */
 
-    if (getLongLongFromObjectOrReply(c, param, &when, NULL) != REDIS_OK)
+    if (getLongLongFromObjectOrReply(c, param, &when, NULL) != REDIS_OK)//第二个参数转换成长整型
         return;
 
-    if (unit == UNIT_SECONDS) when *= 1000;
+    if (unit == UNIT_SECONDS) when *= 1000;//将TTL从s转换为ms
     when += basetime;
 
     /* No key, return zero. */
-    if (lookupKeyRead(c->db,key) == NULL) {
+    if (lookupKeyRead(c->db,key) == NULL) {//查看数据库是否有这个KEY 没有的话直接返回0
         addReply(c,shared.czero);
         return;
     }
@@ -926,19 +926,19 @@ void expireGenericCommand(redisClient *c, PORT_LONGLONG basetime, int unit) {
     }
 }
 
-void expireCommand(redisClient *c) {
+void expireCommand(redisClient *c) {//键的生存时间设置为ttl  s
     expireGenericCommand(c,mstime(),UNIT_SECONDS);
 }
 
-void expireatCommand(redisClient *c) {
+void expireatCommand(redisClient *c) {//expire at XXX unix时间戳 单位是s
     expireGenericCommand(c,0,UNIT_SECONDS);
 }
 
-void pexpireCommand(redisClient *c) {
+void pexpireCommand(redisClient *c) {//键的生存时间设置为ttl  ms
     expireGenericCommand(c,mstime(),UNIT_MILLISECONDS);
 }
 
-void pexpireatCommand(redisClient *c) {
+void pexpireatCommand(redisClient *c) {//expire at XXX unix时间戳 单位是ms
     expireGenericCommand(c,0,UNIT_MILLISECONDS);
 }
 
@@ -972,14 +972,14 @@ void pttlCommand(redisClient *c) {
     ttlGenericCommand(c, 1);
 }
 
-void persistCommand(redisClient *c) {
+void persistCommand(redisClient *c) {//删除一个记录了过期时间的键
     dictEntry *de;
 
-    de = dictFind(c->db->dict,c->argv[1]->ptr);
+    de = dictFind(c->db->dict,c->argv[1]->ptr);//在数据库里查找是否存在这个键
     if (de == NULL) {
         addReply(c,shared.czero);
-    } else {
-        if (removeExpire(c->db,c->argv[1])) {
+    } else {//如果存在这个键的话
+        if (removeExpire(c->db,c->argv[1])) {//从过期字典中移除该键
             addReply(c,shared.cone);
             server.dirty++;
         } else {
