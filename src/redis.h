@@ -944,11 +944,11 @@ typedef struct pubsubPattern {
 typedef void redisCommandProc(redisClient *c);
 typedef int *redisGetKeysProc(struct redisCommand *cmd, robj **argv, int argc, int *numkeys);
 struct redisCommand {
-    char *name;
+    char *name;//命令的名字
     redisCommandProc *proc;
-    int arity;
-    char *sflags; /* Flags as string representation, one char per flag. */
-    int flags;    /* The actual flags, obtained from the 'sflags' field. */
+    int arity;//命令参数的个数 如果这个值为负数-N 那么表示 参数个数大于等于N 注意，命令本身也是一个参数
+    char *sflags; /* Flags as string representation, one char per flag.命令相关的属性 是读取 还是写命令 */
+    int flags;    /* The actual flags, obtained from the 'sflags' field. 二进制的 等同于 sflags*/
     /* Use a function to determine keys arguments in a command line.
      * Used for Redis Cluster redirect. */
     redisGetKeysProc *getkeys_proc;
@@ -956,7 +956,7 @@ struct redisCommand {
     int firstkey; /* The first argument that's a key (0 = no keys) */
     int lastkey;  /* The last argument that's a key */
     int keystep;  /* The step between first and last key */
-    PORT_LONGLONG microseconds, calls;
+    PORT_LONGLONG microseconds, calls;//服务器执行这个命令花的总时长 以及调用的次数
 };
 
 struct redisFunctionSym {

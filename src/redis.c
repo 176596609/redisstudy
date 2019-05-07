@@ -2116,11 +2116,11 @@ void call(redisClient *c, int flags) {
     /* Call the command. */
     c->flags &= ~(REDIS_FORCE_AOF|REDIS_FORCE_REPL);
     redisOpArrayInit(&server.also_propagate);
-    dirty = server.dirty;
+    dirty = server.dirty;//执行命令前的dirty
     start = ustime();
-    c->cmd->proc(c);
-    duration = ustime()-start;
-    dirty = server.dirty-dirty;
+    c->cmd->proc(c);//执行命令
+    duration = ustime()-start;//命令执行的时间
+    dirty = server.dirty-dirty;//是否修改了命令
     if (dirty < 0) dirty = 0;
 
     /* When EVAL is called loading the AOF we don't want commands called
@@ -2191,7 +2191,7 @@ void call(redisClient *c, int flags) {
  * If 1 is returned the client is still alive and valid and
  * other operations can be performed by the caller. Otherwise
  * if 0 is returned the client was destroyed (i.e. after QUIT). */
-int processCommand(redisClient *c) {
+int processCommand(redisClient *c) {//处理命令
     /* The QUIT command is handled separately. Normal command procs will
      * go through checking for replication and QUIT will cause trouble
      * when FORCE_REPLICATION is enabled and would be implemented in
@@ -2205,12 +2205,12 @@ int processCommand(redisClient *c) {
     /* Now lookup the command and check ASAP about trivial error conditions
      * such as wrong arity, bad command name and so forth. */
     c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
-    if (!c->cmd) {
+    if (!c->cmd) {//如果命令为空
         flagTransaction(c);
         addReplyErrorFormat(c,"unknown command '%s'",
             (char*)c->argv[0]->ptr);
         return REDIS_OK;
-    } else if ((c->cmd->arity > 0 && c->cmd->arity != c->argc) ||
+    } else if ((c->cmd->arity > 0 && c->cmd->arity != c->argc) ||//检查命令行的个数是否符合要求
                (c->argc < -c->cmd->arity)) {
         flagTransaction(c);
         addReplyErrorFormat(c,"wrong number of arguments for '%s' command",
@@ -2219,7 +2219,7 @@ int processCommand(redisClient *c) {
     }
 
     /* Check if the user is authenticated */
-    if (server.requirepass && !c->authenticated && c->cmd->proc != authCommand)
+    if (server.requirepass && !c->authenticated && c->cmd->proc != authCommand)//检查客户端是否已经认证了
     {
         flagTransaction(c);
         addReply(c,shared.noautherr);
@@ -2230,7 +2230,7 @@ int processCommand(redisClient *c) {
      * However we don't perform the redirection if:
      * 1) The sender of this command is our master.
      * 2) The command has no key arguments. */
-    if (server.cluster_enabled &&
+    if (server.cluster_enabled &&//如果启用了集群功能 那么执行集群功能
         !(c->flags & REDIS_MASTER) &&
         !(c->flags & REDIS_LUA_CLIENT &&
           server.lua_caller->flags & REDIS_MASTER) &&
@@ -2341,7 +2341,7 @@ int processCommand(redisClient *c) {
     }
 
     /* Lua script too slow? Only allow a limited number of commands. */
-    if (server.lua_timedout &&
+    if (server.lua_timedout &&//如果当前lua脚本超时并进入阻塞状态，那么只执行 script  shutdown类的命令
           c->cmd->proc != authCommand &&
           c->cmd->proc != replconfCommand &&
         !(c->cmd->proc == shutdownCommand &&
@@ -2359,7 +2359,7 @@ int processCommand(redisClient *c) {
     /* Exec the command */
     if (c->flags & REDIS_MULTI &&
         c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
-        c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
+        c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)//如果客户端在执行事务，那么只入队列 不执行除了事务相关别的命令
     {
         queueMultiCommand(c);
         addReply(c,shared.queued);
