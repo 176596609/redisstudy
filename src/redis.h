@@ -541,11 +541,11 @@ typedef struct redisClient {
     int fd;
     redisDb *db;//当前客户端选择的数据库
     int dictid;
-    robj *name;             /* As set by CLIENT SETNAME */
-    sds querybuf;
+    robj *name;             /* As set by CLIENT SETNAME 客户端的名字*/
+    sds querybuf;//client 输入缓存区 
     size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size */
-    int argc;
-    robj **argv;
+    int argc;   //命令参数个数
+    robj **argv;//命令参数数组
     struct redisCommand *cmd, *lastcmd;
     int reqtype;
     int multibulklen;       /* number of multi bulk arguments left to read */
@@ -554,11 +554,11 @@ typedef struct redisClient {
     PORT_ULONG reply_bytes; /* Tot bytes of objects in reply list */
     int sentlen;            /* Amount of bytes already sent in the current
                                buffer or object being sent. */
-    time_t ctime;           /* Client creation time */
+    time_t ctime;           /* Client creation time 客户端创建时间*/
     time_t lastinteraction; /* time of the last interaction, used for timeout */
-    time_t obuf_soft_limit_reached_time;
+    time_t obuf_soft_limit_reached_time;//超过服务端软性限制的时间
     int flags;              /* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */
-    int authenticated;      /* when requirepass is non-NULL */
+    int authenticated;      /* when requirepass is non-NULL 客户端是否通过了认证*/
     int replstate;          /* replication state if this is a slave */
     int repl_put_online_on_ack; /* Install slave write handler on ACK. */
     int repldbfd;           /* replication DB file descriptor */
@@ -700,12 +700,12 @@ struct redisServer {
     int bindaddr_count;         /* Number of addresses in server.bindaddr[] */
     char *unixsocket;           /* UNIX socket path */
     mode_t unixsocketperm;      /* UNIX socket permission */
-    int ipfd[REDIS_BINDADDR_MAX]; /* TCP socket file descriptors */
-    int ipfd_count;             /* Used slots in ipfd[] */
+    int ipfd[REDIS_BINDADDR_MAX]; /* TCP socket file descriptors *///redis绑定的多个网卡获得的套接字数组  也就是监听套接字数组
+    int ipfd_count;             /* Used slots in ipfd[] *///绑定了几个fd
     int sofd;                   /* Unix socket file descriptor */
     int cfd[REDIS_BINDADDR_MAX];/* Cluster bus listening socket */
     int cfd_count;              /* Used slots in cfd[] */
-    list *clients;              /* List of active clients */
+    list *clients;              /* List of active clients 活动中客户端列表*/
     list *clients_to_close;     /* Clients to close asynchronously */
     list *slaves, *monitors;    /* List of slaves and MONITORs */
     redisClient *current_client; /* Current client, only used on crash report */

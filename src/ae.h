@@ -61,9 +61,9 @@ typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 /* File event structure */
 typedef struct aeFileEvent {
     int mask; /* one of AE_(READABLE|WRITABLE) */
-    aeFileProc *rfileProc;
-    aeFileProc *wfileProc;
-    void *clientData;
+    aeFileProc *rfileProc;//读回调
+    aeFileProc *wfileProc;//写回调
+    void *clientData;//客户自定义指针
 } aeFileEvent;
 
 /* Time event structure */
@@ -85,14 +85,14 @@ typedef struct aeFiredEvent {
 
 /* State of an event based program */
 typedef struct aeEventLoop {
-    int maxfd;   /* highest file descriptor currently registered */
-    int setsize; /* max number of file descriptors tracked */
+    int maxfd;   /* highest file descriptor currently registered */ //当前注册的最大fd，ps linux fd是递增的 windows则不是 但是这个redis用hook的方式强制将windows的fd映射成了自增的
+    int setsize; /* max number of file descriptors tracked */ //最多允许多少个客户端
     PORT_LONGLONG timeEventNextId;
     time_t lastTime;     /* Used to detect system clock skew */
-    aeFileEvent *events; /* Registered events */
-    aeFiredEvent *fired; /* Fired events */
-    aeTimeEvent *timeEventHead;
-    int stop;
+    aeFileEvent *events; /* Registered events */ //指针数组 setsize这么大
+    aeFiredEvent *fired; /* Fired events */ //指针数组 setsize这么大
+    aeTimeEvent *timeEventHead;//定时器指针链表
+    int stop;//redis是否停止了
     void *apidata; /* This is used for polling API specific data */
     aeBeforeSleepProc *beforesleep;
 } aeEventLoop;

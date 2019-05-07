@@ -71,7 +71,7 @@ int listMatchObjects(void *a, void *b) {
     return equalStringObjects(a,b);
 }
 
-redisClient *createClient(int fd) {
+redisClient *createClient(int fd) {//创建一个客户端
     redisClient *c = zmalloc(sizeof(redisClient));
 
     /* passing -1 as fd it is possible to create a non connected client.
@@ -79,11 +79,11 @@ redisClient *createClient(int fd) {
      * in the context of a client. When commands are executed in other
      * contexts (for instance a Lua script) we need a non connected client. */
     if (fd != -1) {
-        anetNonBlock(NULL,fd);
-        anetEnableTcpNoDelay(NULL,fd);
+        anetNonBlock(NULL,fd);//设置fd为非阻塞
+        anetEnableTcpNoDelay(NULL,fd);//禁用TCP_NODELAY算法 
         if (server.tcpkeepalive)
-            anetKeepAlive(NULL,fd,server.tcpkeepalive);
-        if (aeCreateFileEvent(server.el,fd,AE_READABLE,
+            anetKeepAlive(NULL,fd,server.tcpkeepalive);//设置tcp链接探测
+        if (aeCreateFileEvent(server.el,fd,AE_READABLE,//对当前客户端进行读
             readQueryFromClient, c) == AE_ERR)
         {
             close(fd);
@@ -92,9 +92,9 @@ redisClient *createClient(int fd) {
         }
     }
 
-    selectDb(c,0);
-    c->id = server.next_client_id++;
-    c->fd = fd;
+    selectDb(c,0);//选择0号数据库
+    c->id = server.next_client_id++;//终端id
+    c->fd = fd;//终端的fd
     c->name = NULL;
     c->bufpos = 0;
     c->querybuf = sdsempty();
@@ -621,14 +621,14 @@ static void acceptCommonHandler(int fd, int flags) {
 }
 
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
-    int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
-    char cip[REDIS_IP_STR_LEN];
+    int cport,/*端口*/ cfd, max = MAX_ACCEPTS_PER_CALL;//最多接收多少个终端请求
+    char cip[REDIS_IP_STR_LEN];//ipv6的最大长度
     REDIS_NOTUSED(el);
     REDIS_NOTUSED(mask);
     REDIS_NOTUSED(privdata);
 
     while(max--) {
-        cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
+        cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);//accept的封装 兼容ip V4和V6
         if (cfd == ANET_ERR) {
             if (errno != EWOULDBLOCK) {
                 redisLog(REDIS_WARNING,
@@ -643,7 +643,7 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
             return;
         }
         redisLog(REDIS_VERBOSE,"Accepted %s:%d", cip, cport);
-        acceptCommonHandler(cfd,0);
+        acceptCommonHandler(cfd,0);//接到一个客户端
     }
 }
 
@@ -1294,7 +1294,7 @@ void processInputBuffer(redisClient *c) {
     }
 }
 
-void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
+void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {//读取客户端发来的消息
     redisClient *c = (redisClient*) privdata;
     int nread, readlen;
     size_t qblen;
@@ -1596,7 +1596,7 @@ void clientCommand(redisClient *c) {
         /* If this client has to be closed, flag it as CLOSE_AFTER_REPLY
          * only after we queued the reply to its output buffers. */
         if (close_this_client) c->flags |= REDIS_CLOSE_AFTER_REPLY;
-    } else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {
+    } else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {//设置客户端的名字 参数必须有三个
         int j, len = (int)sdslen(c->argv[2]->ptr);                              WIN_PORT_FIX /* cast (int) */
         char *p = c->argv[2]->ptr;
 
@@ -1702,7 +1702,7 @@ void rewriteClientCommandArgument(redisClient *c, int i, robj *newval) {
  * Note: this function is very fast so can be called as many time as
  * the caller wishes. The main usage of this function currently is
  * enforcing the client output length limits. */
-PORT_ULONG getClientOutputBufferMemoryUsage(redisClient *c) {
+PORT_ULONG getClientOutputBufferMemoryUsage(redisClient *c) {//此函数返回Redis虚拟的字节数  它是“虚拟”，因为回复输出列表可能包含对象 该函数返回所有对象长度的总和
     PORT_ULONG list_item_size = sizeof(listNode)+sizeof(robj);
 
     return c->reply_bytes + (list_item_size*listLength(c->reply));
@@ -1746,9 +1746,9 @@ char *getClientTypeName(int class) {
  *
  * Return value: non-zero if the client reached the soft or the hard limit.
  *               Otherwise zero is returned. */
-int checkClientOutputBufferLimits(redisClient *c) {
+int checkClientOutputBufferLimits(redisClient *c) {//检查是否超出硬性限制 或者软性限制
     int soft = 0, hard = 0, class;
-    PORT_ULONG used_mem = getClientOutputBufferMemoryUsage(c);
+    PORT_ULONG used_mem = getClientOutputBufferMemoryUsage(c);//虚拟字节数
 
     class = getClientType(c);
     if (server.client_obuf_limits[class].hard_limit_bytes &&

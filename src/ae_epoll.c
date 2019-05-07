@@ -32,8 +32,8 @@
 #include <sys/epoll.h>
 
 typedef struct aeApiState {
-    int epfd;
-    struct epoll_event *events;
+    int epfd;//epoll fd
+    struct epoll_event *events;//epoll 接收已经发生事件的数组 数组大小等于套接字数量  说白了就是发生事件的集合
 } aeApiState;
 
 static int aeApiCreate(aeEventLoop *eventLoop) {
@@ -107,7 +107,7 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
     }
 }
 
-static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
+static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {//tv作为时间参数，在这个指定时间内，阻塞并等待所有被aeCreateFileEvent函数设置为监听状态的套接字产生文件事件 或者超时
     aeApiState *state = eventLoop->apidata;
     int retval, numevents = 0;
 

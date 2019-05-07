@@ -833,7 +833,7 @@ void propagateExpire(redisDb *db, robj *key) {//Ò»¸ö¼ü±»É¾³ı£¬ÄÇÃ´Õâ¸ö¼üÒªÔÚAOFÎ
     decrRefCount(argv[1]);
 }
 
-int expireIfNeeded(redisDb *db, robj *key) {//¼ì²ékeyÊÇ·ñÒÑ¾­¹ıÆÚ ÊÇµÄ»°¾ÍÉ¾µô
+int expireIfNeeded(redisDb *db, robj *key) {//¼ì²ékeyÊÇ·ñÒÑ¾­¹ıÆÚ ÊÇµÄ»°¾ÍÉ¾µô  redisÓĞÁ½ÖÖÉ¾³ı»úÖÆ Ö±½Óµ÷ÓÃ´Ëº¯Êı¶èĞÔÉ¾³ı  »¹ÓĞ¶¨ÆÚÉ¾³ıactiveExpireCycle
     mstime_t when = getExpire(db,key);//»ñÈ¡¸Ã¼üÊÇ·ñÉèÖÃÁË¹ıÆÚÊ±¼ä
     mstime_t now;
 
@@ -856,7 +856,7 @@ int expireIfNeeded(redisDb *db, robj *key) {//¼ì²ékeyÊÇ·ñÒÑ¾­¹ıÆÚ ÊÇµÄ»°¾ÍÉ¾µô
      * Still we try to return the right information to the caller,
      * that is, 0 if we think the key should be still valid, 1 if
      * we think the key is expired at this time. */
-    if (server.masterhost != NULL) return now > when;//Ã»ÓĞ¹ıÆÚ ²»É¾³ı
+    if (server.masterhost != NULL) return now > when;//Ã»ÓĞ¹ıÆÚ ²»É¾³ı   Ö»ÓĞÖ÷·şÎñÆ÷²Å¹ıÆÚÉ¾³ı  ´Ó·şÎñÆ÷Ö»ÔÚ½ÓÊÕµ½DEL ²ÅÉ¾³ı
 
     /* Return when this key has not expired */
     if (now <= when) return 0;

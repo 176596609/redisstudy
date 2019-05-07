@@ -143,10 +143,10 @@ void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
 
-int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
+int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,//将给定的套接字及事件加入IO多路复用监听中
         aeFileProc *proc, void *clientData)
 {
-    if (fd >= eventLoop->setsize) {
+    if (fd >= eventLoop->setsize) {//如果注册用户已经多于最大容量 那么返回错误  其实就是fd非法
         errno = ERANGE;
         return AE_ERR;
     }
@@ -154,16 +154,16 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
 
     if (aeApiAddEvent(eventLoop, fd, mask) == -1)
         return AE_ERR;
-    fe->mask |= mask;
+    fe->mask |= mask;//保存了当前fd关心的事件
     if (mask & AE_READABLE) fe->rfileProc = proc;
     if (mask & AE_WRITABLE) fe->wfileProc = proc;
-    fe->clientData = clientData;
+    fe->clientData = clientData;//客户是有数据
     if (fd > eventLoop->maxfd)
-        eventLoop->maxfd = fd;
+        eventLoop->maxfd = fd;//更新最大fd
     return AE_OK;
 }
 
-void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
+void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)//取消fd上某个事件的监听
 {
     if (fd >= eventLoop->setsize) return;
     aeFileEvent *fe = &eventLoop->events[fd];
@@ -171,7 +171,7 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
 
     aeApiDelEvent(eventLoop, fd, mask);
     fe->mask = fe->mask & (~mask);
-    if (fd == eventLoop->maxfd && fe->mask == AE_NONE) {
+    if (fd == eventLoop->maxfd && fe->mask == AE_NONE) {//如果最大的fd已经完全不被监听了 那么更新最大fd
         /* Update the max fd */
         int j;
 
@@ -181,7 +181,7 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
     }
 }
 
-int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {
+int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {//返回当前套接字正在被监听的事件类型
     if (fd >= eventLoop->setsize) return 0;
     aeFileEvent *fe = &eventLoop->events[fd];
 
@@ -220,7 +220,7 @@ static void aeAddMillisecondsToNow(PORT_LONGLONG milliseconds, PORT_LONG *sec, P
     *ms = when_ms;
 }
 
-PORT_LONGLONG aeCreateTimeEvent(aeEventLoop *eventLoop, PORT_LONGLONG milliseconds,
+PORT_LONGLONG aeCreateTimeEvent(aeEventLoop *eventLoop, PORT_LONGLONG milliseconds,//其实就是生成一个aeTimeEvent结构体 并插在前面
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc)
 {
@@ -239,7 +239,7 @@ PORT_LONGLONG aeCreateTimeEvent(aeEventLoop *eventLoop, PORT_LONGLONG millisecon
     return id;
 }
 
-int aeDeleteTimeEvent(aeEventLoop *eventLoop, PORT_LONGLONG id)
+int aeDeleteTimeEvent(aeEventLoop *eventLoop, PORT_LONGLONG id)//遍历并删除定时器 如果被删除的定时器有finalizerProc 方法就调用一把  释放内存
 {
     aeTimeEvent *te, *prev = NULL;
 
@@ -272,12 +272,12 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, PORT_LONGLONG id)
  *    Much better but still insertion or deletion of timers is O(N).
  * 2) Use a skiplist to have this operation as O(1) and insertion as O(log(N)).
  */
-static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
+static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)//O(N) 但是没必要优化 redis总共用了两个定时器
 {
-    aeTimeEvent *te = eventLoop->timeEventHead;
+    aeTimeEvent *te = eventLoop->timeEventHead;//获得链表
     aeTimeEvent *nearest = NULL;
 
-    while(te) {
+    while(te) {//遍历整个链表获得最早超时的一个
         if (!nearest || te->when_sec < nearest->when_sec ||
                 (te->when_sec == nearest->when_sec &&
                  te->when_ms < nearest->when_ms))
@@ -302,7 +302,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
      * events to be processed ASAP when this happens: the idea is that
      * processing events earlier is less dangerous than delaying them
      * indefinitely, and practice suggests it is. */
-    if (now < eventLoop->lastTime) {
+    if (now < eventLoop->lastTime) {//如果系统时间被篡改了 那么直接执行时间任务 这个假设是 尽快执行比延迟执行要好 没有风险
         te = eventLoop->timeEventHead;
         while(te) {
             te->when_sec = 0;
@@ -344,7 +344,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
              * deletion (putting references to the nodes to delete into
              * another linked list). */
             if (retval != AE_NOMORE) {
-                aeAddMillisecondsToNow(retval,&te->when_sec,&te->when_ms);
+                aeAddMillisecondsToNow(retval,&te->when_sec,&te->when_ms);//重新设置下次超时时间
             } else {
                 aeDeleteTimeEvent(eventLoop, id);
             }
@@ -445,7 +445,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
         }
     }
     /* Check time events */
-    if (flags & AE_TIME_EVENTS)
+    if (flags & AE_TIME_EVENTS)//检查定时事件
         processed += processTimeEvents(eventLoop);
 
     return processed; /* return the number of processed file/time events */
@@ -453,7 +453,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
 /* Wait for milliseconds until the given file descriptor becomes
  * writable/readable/exception */
-int aeWait(int fd, int mask, PORT_LONGLONG milliseconds) {
+int aeWait(int fd, int mask, PORT_LONGLONG milliseconds) {//等待改套接字可读写或者出现异常或者超时
     struct pollfd pfd;
     int retmask = 0, retval;
 
@@ -478,7 +478,7 @@ void aeMain(aeEventLoop *eventLoop) {
     while (!eventLoop->stop) {
         if (eventLoop->beforesleep != NULL)
             eventLoop->beforesleep(eventLoop);
-        aeProcessEvents(eventLoop, AE_ALL_EVENTS);
+        aeProcessEvents(eventLoop, AE_ALL_EVENTS);//处理两种时间 文件fd事件和定时器事件
     }
 }
 

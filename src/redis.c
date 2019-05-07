@@ -74,7 +74,7 @@ double R_Zero, R_PosInf, R_NegInf, R_Nan;
 /*================================= Globals ================================= */
 
 /* Global vars */
-struct redisServer server; /* server global state */
+struct redisServer server; /* server global state c语言全局变量的使用*/
 
 /* Our command table.
  *
@@ -763,7 +763,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, PORT_LONGLONG now) {
  * executed, where the time limit is a percentage of the REDIS_HZ period
  * as specified by the REDIS_EXPIRELOOKUPS_TIME_PERC define. */
 
-void activeExpireCycle(int type) {
+void activeExpireCycle(int type) {//删除过期键
     /* This function has some global state in order to continue the work
      * incrementally across calls. */
     static unsigned int current_db = 0; /* Last DB tested. */
@@ -1067,13 +1067,13 @@ void updateCachedTime(void) {
  * Here is where we do a number of things that need to be done asynchronously.
  * For instance:
  *
- * - Active expired keys collection (it is also performed in a lazy way on
+ * - Active expired keys collection (it is also performed in a lazy way on   清理数据库的过期键
  *   lookup).
  * - Software watchdog.
- * - Update some statistic.
- * - Incremental rehashing of the DBs hash tables.
- * - Triggering BGSAVE / AOF rewrite, and handling of terminated children.
- * - Clients timeout of different kinds.
+ * - Update some statistic.//更新一些数值 时间 内存占用 数据库占用
+ * - Incremental rehashing of the DBs hash tables.  
+ * - Triggering BGSAVE / AOF rewrite, and handling of terminated children. 尝试进行AOF或RDB持久化操作
+ * - Clients timeout of different kinds. 关闭或清理链接失效的客户端
  * - Replication reconnection.
  * - Many more...
  *
@@ -1292,7 +1292,7 @@ int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData
     }
 
     server.cronloops++;
-    return 1000/server.hz;
+    return 1000/server.hz;//每s调用 hz次  1Hz = 1/s，即在单位时间内完成振动的次数，单位为赫兹（1赫兹=1次/秒）。   那么每1000/server.hz ms就得超时
 }
 
 /* This function gets called every time Redis is entering the
@@ -1905,7 +1905,7 @@ void initServer(void) {
     /* Create an event handler for accepting new connections in TCP and Unix
      * domain sockets. */
     for (j = 0; j < server.ipfd_count; j++) {
-        if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
+        if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,//针对监听套接字获取注册读取事件
             acceptTcpHandler,NULL) == AE_ERR)
             {
                 redisPanic(
@@ -2455,7 +2455,7 @@ int prepareForShutdown(int flags) {
  * can avoid leaking any information about the password length and any
  * possible branch misprediction related leak.
  */
-int time_independent_strcmp(char *a, char *b) {
+int time_independent_strcmp(char *a, char *b) {//对比两个字符串  为了防止用户猜测redis内存 因此只让对比512字节 这个设计十分巧妙 也就是说用户最多能知道redis512 字节的内容
     char bufa[REDIS_AUTHPASS_MAX_LEN], bufb[REDIS_AUTHPASS_MAX_LEN];
     /* The above two strlen perform len(a) + len(b) operations where either
      * a or b are fixed (our password) length, and the difference is only
@@ -3761,7 +3761,7 @@ int main(int argc, char **argv) {
     }
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
-    aeMain(server.el);
+    aeMain(server.el);//程序主循环
     aeDeleteEventLoop(server.el);
     return 0;
 }
