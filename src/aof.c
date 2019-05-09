@@ -286,12 +286,12 @@ int startAppendOnly(void) {
  * However if force is set to 1 we'll write regardless of the background
  * fsync. */
 #define AOF_WRITE_LOG_ERROR_RATE 30 /* Seconds between errors logging. */
-void flushAppendOnlyFile(int force) {
+void flushAppendOnlyFile(int force) {//考虑是否将aof_buf中的内容写入和保存到AOF文件
     ssize_t nwritten;
     int sync_in_progress = 0;
     mstime_t latency;
 
-    if (sdslen(server.aof_buf) == 0) return;
+    if (sdslen(server.aof_buf) == 0) return;//aof里面啥都没有
 
     if (server.aof_fsync == AOF_FSYNC_EVERYSEC)
         sync_in_progress = bioPendingJobsOfType(REDIS_BIO_AOF_FSYNC) != 0;
@@ -448,7 +448,7 @@ void flushAppendOnlyFile(int force) {
     }
 }
 
-sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
+sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {//生成AOF格式的字符串 都是一行一行的
     char buf[32];
     int len, j;
     robj *o;
@@ -504,7 +504,7 @@ sds catAppendOnlyExpireAtCommand(sds buf, struct redisCommand *cmd, robj *key, r
     argv[0] = createStringObject("PEXPIREAT",9);
     argv[1] = key;
     argv[2] = createStringObjectFromLongLong(when);
-    buf = catAppendOnlyGenericCommand(buf, 3, argv);
+    buf = catAppendOnlyGenericCommand(buf, 3, argv);//生成AOF格式的字符串 都是一行一行的 附加到buf里面
     decrRefCount(argv[0]);
     decrRefCount(argv[2]);
     return buf;
@@ -516,7 +516,7 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
 
     /* The DB this command was targeting is not the same as the last command
      * we appended. To issue a SELECT command is needed. */
-    if (dictid != server.aof_selected_db) {
+    if (dictid != server.aof_selected_db) {//如果要修改的数据库和上次的不一样
         char seldb[64];
 
         snprintf(seldb,sizeof(seldb),"%d",dictid);
@@ -534,14 +534,14 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
         tmpargv[0] = createStringObject("SET",3);
         tmpargv[1] = argv[1];
         tmpargv[2] = argv[3];
-        buf = catAppendOnlyGenericCommand(buf,3,tmpargv);
+        buf = catAppendOnlyGenericCommand(buf,3,tmpargv);////生成AOF格式的字符串 都是一行一行的
         decrRefCount(tmpargv[0]);
-        buf = catAppendOnlyExpireAtCommand(buf,cmd,argv[1],argv[2]);
+        buf = catAppendOnlyExpireAtCommand(buf,cmd,argv[1],argv[2]);//生成AOF格式的字符串 都是一行一行的
     } else {
         /* All the other commands don't need translation or need the
          * same translation already operated in the command vector
          * for the replication itself. */
-        buf = catAppendOnlyGenericCommand(buf,argc,argv);
+        buf = catAppendOnlyGenericCommand(buf,argc,argv);////生成AOF格式的字符串 都是一行一行的
     }
 
     /* Append to the AOF buffer. This will be flushed on disk just before
@@ -554,7 +554,7 @@ void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int a
      * accumulate the differences between the child DB and the current one
      * in a buffer, so that when the child process will do its work we
      * can append the differences to the new append only file. */
-    if (server.aof_child_pid != -1)
+    if (server.aof_child_pid != -1)//后台正在写AOF
         aofRewriteBufferAppend((unsigned char*)buf,(PORT_ULONG)sdslen(buf));    WIN_PORT_FIX /* cast (PORT_ULONG) */
 
     sdsfree(buf);
