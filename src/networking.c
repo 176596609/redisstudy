@@ -734,9 +734,9 @@ void freeClient(redisClient *c) {
     /* Close socket, unregister events, and remove list of replies and
      * accumulated arguments. */
     if (c->fd != -1) {
-        aeDeleteFileEvent(server.el,c->fd,AE_READABLE);
+        aeDeleteFileEvent(server.el,c->fd,AE_READABLE);//去掉对当前socket的两个监听事件
         aeDeleteFileEvent(server.el,c->fd,AE_WRITABLE);
-        close(c->fd);
+        close(c->fd);//关闭socket
     }
     listRelease(c->reply);
     freeClientArgv(c);

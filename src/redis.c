@@ -658,7 +658,7 @@ dictType replScriptCacheDictType = {
     NULL                        /* val destructor */
 };
 
-int htNeedsResize(dict *dict) {
+int htNeedsResize(dict *dict) {//检查负载因子是否小于0.1
     PORT_LONGLONG size, used;
 
     size = dictSlots(dict);
@@ -669,7 +669,7 @@ int htNeedsResize(dict *dict) {
 
 /* If the percentage of used slots in the HT reaches REDIS_HT_MINFILL
  * we resize the hash table to save memory */
-void tryResizeHashTables(int dbid) {
+void tryResizeHashTables(int dbid) {//当字典的负载因子小于10%是回收内存
     if (htNeedsResize(server.db[dbid].dict))
         dictResize(server.db[dbid].dict);
     if (htNeedsResize(server.db[dbid].expires))
@@ -916,7 +916,7 @@ PORT_LONGLONG getInstantaneousMetric(int metric) {
  * The function gets the current time in milliseconds as argument since
  * it gets called multiple times in a loop, so calling gettimeofday() for
  * each iteration would be costly without any actual gain. */
-int clientsCronHandleTimeout(redisClient *c, mstime_t now_ms) {
+int clientsCronHandleTimeout(redisClient *c, mstime_t now_ms) {//关闭空闲时间太长的终端
     time_t now = now_ms/1000;
 
     if (server.maxidletime &&
@@ -927,7 +927,7 @@ int clientsCronHandleTimeout(redisClient *c, mstime_t now_ms) {
         (now - c->lastinteraction > server.maxidletime))
     {
         redisLog(REDIS_VERBOSE,"Closing idle client");
-        freeClient(c);
+        freeClient(c);//清空内存 关闭socket
         return 1;
     } else if (c->flags & REDIS_BLOCKED) {
         /* Blocked OPS timeout is handled with milliseconds resolution.
@@ -975,7 +975,7 @@ int clientsCronResizeQueryBuffer(redisClient *c) {
 }
 
 #define CLIENTS_CRON_MIN_ITERATIONS 5
-void clientsCron(void) {
+void clientsCron(void) {//serverCron 调用clientsCron  干掉长时间没有交互的客户端 
     /* Make sure to process at least numclients/server.hz of clients
      * per call. Since this function is called server.hz times per second
      * we are sure that in the worst case we process all the clients in 1
@@ -1021,7 +1021,7 @@ void databasesCron(void) {
     /* Perform hash tables rehashing if needed, but only if there are no
      * other processes saving the DB on disk. Otherwise rehashing is bad
      * as will cause a lot of copy-on-write of memory pages. */
-    if (server.rdb_child_pid == -1 && server.aof_child_pid == -1) {
+    if (server.rdb_child_pid == -1 && server.aof_child_pid == -1) {//只要不是子进程
         /* We use global counters so if we stop the computation at a given
          * DB we'll be able to start from the successive in the next
          * cron loop iteration. */
@@ -1034,7 +1034,7 @@ void databasesCron(void) {
         if (dbs_per_call > server.dbnum) dbs_per_call = server.dbnum;
 
         /* Resize */
-        for (j = 0; j < dbs_per_call; j++) {
+        for (j = 0; j < dbs_per_call; j++) {//当字典的负载因子小于10%是回收内存
             tryResizeHashTables(resize_db % server.dbnum);
             resize_db++;
         }
@@ -1042,7 +1042,7 @@ void databasesCron(void) {
         /* Rehash */
         if (server.activerehashing) {
             for (j = 0; j < dbs_per_call; j++) {
-                int work_done = incrementallyRehash(rehash_db % server.dbnum);
+                int work_done = incrementallyRehash(rehash_db % server.dbnum);//逐渐的对每个数据库进行渐进式rehash
                 rehash_db++;
                 if (work_done) {
                     /* If the function did some work, stop here, we'll do
@@ -1058,7 +1058,7 @@ void databasesCron(void) {
  * virtual memory and aging there is to store the current time in objects at
  * every object access, and accuracy is not needed. To access a global var is
  * a lot faster than calling time(NULL) */
-void updateCachedTime(void) {
+void updateCachedTime(void) {//服务器缓存当前时间 减少系统调用
     server.unixtime = time(NULL);
     server.mstime = mstime();
 }
@@ -1082,7 +1082,7 @@ void updateCachedTime(void) {
  * a macro is used: run_with_period(milliseconds) { .... }
  */
 
-int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData) {
+int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData) {//默认100ms调用一次
     int j;
     REDIS_NOTUSED(eventLoop);
     REDIS_NOTUSED(id);
@@ -1093,7 +1093,7 @@ int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData
     if (server.watchdog_period) watchdogScheduleSignal(server.watchdog_period);
 
     /* Update the time cache. */
-    updateCachedTime();
+    updateCachedTime();//服务器缓存的当前时间 减少缓存
 
     run_with_period(100) {
         trackInstantaneousMetric(REDIS_METRIC_COMMAND,server.stat_numcommands);
@@ -1117,7 +1117,7 @@ int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData
     server.lruclock = getLRUClock();
 
     /* Record the max memory used since the server was started. */
-    if (zmalloc_used_memory() > server.stat_peak_memory)
+    if (zmalloc_used_memory() > server.stat_peak_memory)//记录redis曾经用过的内存峰值
         server.stat_peak_memory = zmalloc_used_memory();
 
     /* Sample the RSS here since this is a relatively slow call. */
@@ -1125,7 +1125,7 @@ int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData
 
     /* We received a SIGTERM, shutting down here in a safe way, as it is
      * not ok doing so inside the signal handler. */
-    if (server.shutdown_asap) {
+    if (server.shutdown_asap) {//收到退出信号 优雅的退出
         if (prepareForShutdown(0) == REDIS_OK) exit(0);
         redisLog(REDIS_WARNING,"SIGTERM received but errors trying to shut down the server, check the logs for more information");
         server.shutdown_asap = 0;
@@ -1574,7 +1574,7 @@ void initServerConfig(void) {
     server.commands = dictCreate(&commandTableDictType,NULL);
     server.orig_commands = dictCreate(&commandTableDictType,NULL);
     populateCommandTable();
-    server.delCommand = lookupCommandByCString("del");
+    server.delCommand = lookupCommandByCString("del");//防止重命名
     server.multiCommand = lookupCommandByCString("multi");
     server.lpushCommand = lookupCommandByCString("lpush");
     server.lpopCommand = lookupCommandByCString("lpop");
@@ -1893,7 +1893,7 @@ void initServer(void) {
     server.aof_last_write_status = REDIS_OK;
     server.aof_last_write_errno = 0;
     server.repl_good_slaves_count = 0;
-    updateCachedTime();
+    updateCachedTime();//服务器缓存当前时间 减少系统调用
 
     /* Create the serverCron() time event, that's our main way to process
      * background operations. */
@@ -2335,7 +2335,7 @@ int processCommand(redisClient *c) {//处理命令
 
     /* Loading DB? Return an error if the command has not the
      * REDIS_CMD_LOADING flag. */
-    if (server.loading && !(c->cmd->flags & REDIS_CMD_LOADING)) {
+    if (server.loading && !(c->cmd->flags & REDIS_CMD_LOADING)) {//如果redis正在加载RDB文件 那么回复客户正在加载
         addReply(c, shared.loadingerr);
         return REDIS_OK;
     }
@@ -3558,7 +3558,7 @@ static void sigShutdownHandler(int sig) {
      * If we receive the signal the second time, we interpret this as
      * the user really wanting to quit ASAP without waiting to persist
      * on disk. */
-    if (server.shutdown_asap && sig == SIGINT) {
+    if (server.shutdown_asap && sig == SIGINT) {//如果用户连续两次发送了 SIGINT 那么直接退出进程 不再等待持久化
         redisLogFromHandler(REDIS_WARNING, "You insist... exiting now.");
         rdbRemoveTempFile(getpid());
         exit(1); /* Exit with an error since this was not a clean shutdown. */
@@ -3610,7 +3610,7 @@ int checkForSentinelMode(int argc, char **argv) {
 void loadDataFromDisk(void) {
     PORT_LONGLONG start = ustime();
     if (server.aof_state == REDIS_AOF_ON) {
-        if (loadAppendOnlyFile(server.aof_filename) == REDIS_OK)
+        if (loadAppendOnlyFile(server.aof_filename) == REDIS_OK)//加载AOF文件
             redisLog(REDIS_NOTICE,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
     } else {
         if (rdbLoad(server.rdb_filename) == REDIS_OK) {
@@ -3738,7 +3738,7 @@ int main(int argc, char **argv) {
     #ifdef __linux__
         linuxMemoryWarnings();
     #endif
-        loadDataFromDisk();
+        loadDataFromDisk();//从硬盘加载AOF或者RDB数据
         if (server.cluster_enabled) {
             if (verifyClusterConfigWithData() == REDIS_ERR) {
                 redisLog(REDIS_WARNING,

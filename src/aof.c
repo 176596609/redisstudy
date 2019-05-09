@@ -614,7 +614,7 @@ void freeFakeClient(struct redisClient *c) {
  * fatal error an error message is logged and the program exists. */
 int loadAppendOnlyFile(char *filename) {
     struct redisClient *fakeClient;
-    FILE *fp = fopen(filename,IF_WIN32("rb","r"));
+    FILE *fp = fopen(filename,IF_WIN32("rb","r"));//打开AOF文件
     struct redis_stat sb;
     int old_aof_state = server.aof_state;
     PORT_LONG loops = 0;
@@ -635,7 +635,7 @@ int loadAppendOnlyFile(char *filename) {
      * to the same file we're about to read. */
     server.aof_state = REDIS_AOF_OFF;
 
-    fakeClient = createFakeClient();
+    fakeClient = createFakeClient();//创建一个假的客户端 读取AOF命令并执行
     startLoading(fp);
 
     while(1) {
@@ -648,42 +648,42 @@ int loadAppendOnlyFile(char *filename) {
 
         /* Serve the clients from time to time */
         if (!(loops++ % 1000)) {
-            loadingProgress((off_t)ftello(fp));                                 WIN_PORT_FIX /* cast (off_t) */
-            processEventsWhileBlocked();
+            loadingProgress((off_t)ftello(fp));                                 WIN_PORT_FIX /* cast (off_t) *///更新加载进度
+            processEventsWhileBlocked(); //在加载AOF或者RDB文件的中间 处理些网络事件 可以回复用户LOADING
         }
 
-        if (fgets(buf,sizeof(buf),fp) == NULL) {
+        if (fgets(buf,sizeof(buf),fp) == NULL) {//读取文件  每次读取一行 最多读取127个
             if (feof(fp))
                 break;
             else
                 goto readerr;
         }
-        if (buf[0] != '*') goto fmterr;
-        if (buf[1] == '\0') goto readerr;
-        argc = atoi(buf+1);
+        if (buf[0] != '*') goto fmterr;//第一个字符不是* 非法格式
+        if (buf[1] == '\0') goto readerr;//第二个byte是0 被截断也是有问题的
+        argc = atoi(buf+1);//获取参数的个数
         if (argc < 1) goto fmterr;
 
-        argv = zmalloc(sizeof(robj*)*argc);
-        fakeClient->argc = argc;
-        fakeClient->argv = argv;
+        argv = zmalloc(sizeof(robj*)*argc);//申请N个对象 用来放N个参数
+        fakeClient->argc = argc;//fack 客户端 
+        fakeClient->argv = argv;//对象列表
 
-        for (j = 0; j < argc; j++) {
-            if (fgets(buf,sizeof(buf),fp) == NULL) {
+        for (j = 0; j < argc; j++) {//获取argc个参数
+            if (fgets(buf,sizeof(buf),fp) == NULL) {//再次读取一行 读取出错   
                 fakeClient->argc = j; /* Free up to j-1. */
-                freeFakeClientArgv(fakeClient);
+                freeFakeClientArgv(fakeClient);//释放相关内存
                 goto readerr;
             }
-            if (buf[0] != '$') goto fmterr;
-            len = strtol(buf+1,NULL,10);
-            argsds = sdsnewlen(NULL,len);
-            if (len && fread(argsds,len,1,fp) == 0) {
+            if (buf[0] != '$') goto fmterr;//格式错误 第二行的第一个字符不是$那么说明格式有问题
+            len = strtol(buf+1,NULL,10);//获得参数长度 len个字节
+            argsds = sdsnewlen(NULL,len);//获得二进制安全的内存sds
+            if (len && fread(argsds,len,1,fp) == 0) {//读取len长度的内容进来
                 sdsfree(argsds);
                 fakeClient->argc = j; /* Free up to j-1. */
                 freeFakeClientArgv(fakeClient);
                 goto readerr;
             }
-            argv[j] = createObject(REDIS_STRING,argsds);
-            if (fread(buf,2,1,fp) == 0) {
+            argv[j] = createObject(REDIS_STRING,argsds);//将读取出来的len长度的内容转化成对象
+            if (fread(buf,2,1,fp) == 0) {//应该是读取\r\n 其实就是跨过\r\n
                 fakeClient->argc = j+1; /* Free up to j. */
                 freeFakeClientArgv(fakeClient);
                 goto readerr; /* discard CRLF */
@@ -691,14 +691,14 @@ int loadAppendOnlyFile(char *filename) {
         }
 
         /* Command lookup */
-        cmd = lookupCommand(argv[0]->ptr);
+        cmd = lookupCommand(argv[0]->ptr);//获取AOF中保存的命令
         if (!cmd) {
             redisLog(REDIS_WARNING,"Unknown command '%s' reading the append only file", (char*)argv[0]->ptr);
             exit(1);
         }
 
         /* Run the command in the context of a fake client */
-        cmd->proc(fakeClient);
+        cmd->proc(fakeClient);//修改数据库
 
         /* The fake client should not have a reply */
         redisAssert(fakeClient->bufpos == 0 && listLength(fakeClient->reply) == 0);
@@ -707,7 +707,7 @@ int loadAppendOnlyFile(char *filename) {
 
         /* Clean up. Command code may have changed argv/argc so we use the
          * argv/argc of the client instead of the local variables. */
-        freeFakeClientArgv(fakeClient);
+        freeFakeClientArgv(fakeClient);//释放内存
         if (server.aof_load_truncated) valid_up_to = ftello(fp);
     }
 

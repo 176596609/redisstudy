@@ -121,7 +121,7 @@ POSIX_ONLY(#include <pthread.h>)
     } \
 } while(0)
 
-static size_t used_memory = 0;
+static size_t used_memory = 0;//全局变量记录内存增加减小  内存的使用量
 static int zmalloc_thread_safe = 0;
 #ifdef _WIN32
 pthread_mutex_t used_memory_mutex;

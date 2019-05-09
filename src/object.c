@@ -696,7 +696,7 @@ char *strEncoding(int encoding) {
 /* Given an object returns the min number of milliseconds the object was never
  * requested, using an approximated LRU algorithm. */
 PORT_ULONGLONG estimateObjectIdleTime(robj *o) {//获取一个对象的空转时间
-    PORT_ULONGLONG lruclock = LRU_CLOCK();
+    PORT_ULONGLONG lruclock = LRU_CLOCK();//用服务器缓存的LRU时间减去当前对象的LRU
     if (lruclock >= o->lru) {
         return (lruclock - o->lru) * REDIS_LRU_CLOCK_RESOLUTION;
     } else {

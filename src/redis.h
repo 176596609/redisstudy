@@ -684,8 +684,8 @@ struct redisServer {
     dict *commands;             /* Command table */
     dict *orig_commands;        /* Command table before command renaming. */
     aeEventLoop *el;
-    unsigned lruclock:REDIS_LRU_BITS; /* Clock for LRU eviction */
-    int shutdown_asap;          /* SHUTDOWN needed ASAP */
+    unsigned lruclock:REDIS_LRU_BITS; /* Clock for LRU eviction  LRU时钟 用来辅助计算所有对象的LRU，减少系统调用 也是在serverCorn里面进行更新*/
+    int shutdown_asap;          /* SHUTDOWN needed ASAP  检查是否要退出redis */
     int activerehashing;        /* Incremental rehash in serverCron() */
     char *requirepass;          /* Pass for AUTH command, or NULL */
     char *pidfile;              /* PID file path */
@@ -716,9 +716,9 @@ struct redisServer {
     uint64_t next_client_id;    /* Next client unique ID. Incremental. */
     /* RDB / AOF loading information */
     int loading;                /* We are loading data from disk if true */
-    off_t loading_total_bytes;
-    off_t loading_loaded_bytes;
-    time_t loading_start_time;
+    off_t loading_total_bytes; //总共要加载的字节数
+    off_t loading_loaded_bytes;//已经加载了XXX
+    time_t loading_start_time;//开始加载AOF或者rdb的时间
     off_t loading_process_events_interval_bytes;
     /* Fast pointers to often looked up command */
     struct redisCommand *delCommand, *multiCommand, *lpushCommand, *lpopCommand,
@@ -895,8 +895,8 @@ struct redisServer {
     size_t zset_max_ziplist_entries;
     size_t zset_max_ziplist_value;
     size_t hll_sparse_max_bytes;
-    time_t unixtime;        /* Unix time sampled every cron cycle. */
-    PORT_LONGLONG mstime;       /* Like 'unixtime' but with milliseconds resolution. */
+    time_t unixtime;        /* Unix time sampled every cron cycle. 服务器缓存当前时间 减少系统调用 ps 服务器只会在打印日志，更新服务器的LRU时钟等对时间精确度要求不高的情况下用这个时间，对于键设置过期时间，还是会调用系统嗲用获得精确的时间*/
+    PORT_LONGLONG mstime;       /* Like 'unixtime' but with milliseconds resolution. 服务器缓存当前时间 减少系统调用 */
     /* Pubsub */
     dict *pubsub_channels;  /* Map channels to list of subscribed clients */
     list *pubsub_patterns;  /* A list of pubsub_patterns */
