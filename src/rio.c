@@ -157,7 +157,7 @@ static const rio rioFileIO = {
 };
 
 void rioInitWithFile(rio *r, FILE *fp) {
-    *r = rioFileIO;
+    *r = rioFileIO;//读写函数
     r->io.file.fp = fp;
     r->io.file.buffered = 0;
     r->io.file.autosync = 0;
@@ -315,7 +315,7 @@ void rioSetAutoSync(rio *r, off_t bytes) {
  * generating the Redis protocol for the Append Only File. */
 
 /* Write multi bulk count in the format: "*<count>\r\n". */
-size_t rioWriteBulkCount(rio *r, char prefix, int count) {
+size_t rioWriteBulkCount(rio *r, char prefix, int count) {//将一个前缀 和 一个数字写入文件
     char cbuf[128];
     int clen;
 
@@ -328,12 +328,12 @@ size_t rioWriteBulkCount(rio *r, char prefix, int count) {
 }
 
 /* Write binary-safe string in the format: "$<count>\r\n<payload>\r\n". */
-size_t rioWriteBulkString(rio *r, const char *buf, size_t len) {
+size_t rioWriteBulkString(rio *r, const char *buf, size_t len) { 
     size_t nwritten;
 
-    if ((nwritten = rioWriteBulkCount(r,'$',(int)len)) == 0) return 0;          WIN_PORT_FIX /* cast (int) */
-    if (len > 0 && rioWrite(r,buf,len) == 0) return 0;
-    if (rioWrite(r,"\r\n",2) == 0) return 0;
+    if ((nwritten = rioWriteBulkCount(r,'$',(int)len)) == 0) return 0;          WIN_PORT_FIX /* cast (int) *///写入一个前缀加一个数字 加\r\n
+    if (len > 0 && rioWrite(r,buf,len) == 0) return 0;//写入具体内容
+    if (rioWrite(r,"\r\n",2) == 0) return 0;//写入回车换行
     return nwritten+len+2;
 }
 
@@ -342,8 +342,8 @@ size_t rioWriteBulkLongLong(rio *r, PORT_LONGLONG l) {
     char lbuf[32];
     unsigned int llen;
 
-    llen = ll2string(lbuf,sizeof(lbuf),l);
-    return rioWriteBulkString(r,lbuf,llen);
+    llen = ll2string(lbuf,sizeof(lbuf),l);//数字转换为字符串
+    return rioWriteBulkString(r,lbuf,llen);//写入一个数字
 }
 
 /* Write a double value in the format: "$<count>\r\n<payload>\r\n" */

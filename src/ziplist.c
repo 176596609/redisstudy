@@ -748,7 +748,7 @@ unsigned char *ziplistPrev(unsigned char *zl, unsigned char *p) {
  * on the encoding of the entry. '*sstr' is always set to NULL to be able
  * to find out whether the string pointer or the integer value was set.
  * Return 0 if 'p' points to the end of the ziplist, 1 otherwise. */
-unsigned int ziplistGet(unsigned char *p, unsigned char **sstr, unsigned int *slen, PORT_LONGLONG *sval) {
+unsigned int ziplistGet(unsigned char *p, unsigned char **sstr, unsigned int *slen, PORT_LONGLONG *sval) {//p其实就是一个压缩列表的元素 可能是字符串 可能是数字  如果是字符串 用sstr返回 否则用sval返回
     zlentry entry;
     if (p == NULL || p[0] == ZIP_END) return 0;
     if (sstr) *sstr = NULL;

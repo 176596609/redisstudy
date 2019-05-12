@@ -769,11 +769,11 @@ fmterr: /* Format error. */
 
 /* Delegate writing an object to writing a bulk string or bulk PORT_LONGLONG.
  * This is not placed in rio.c since that adds the redis.h dependency. */
-int rioWriteBulkObject(rio *r, robj *obj) {
+int rioWriteBulkObject(rio *r, robj *obj) {//将一个对象写入文件 这个对象看看只能是字符串（二进制安全）
     /* Avoid using getDecodedObject to help copy-on-write (we are often
      * in a child process when this function is called). */
     if (obj->encoding == REDIS_ENCODING_INT) {
-        return (int) rioWriteBulkLongLong(r,(PORT_LONG)obj->ptr);               WIN_PORT_FIX /* cast (int) */
+        return (int) rioWriteBulkLongLong(r,(PORT_LONG)obj->ptr);               WIN_PORT_FIX /* cast (int) */  //内部将数字转化为字符串 rioWriteBulkString
     } else if (sdsEncodedObject(obj)) {
         return (int) rioWriteBulkString(r,obj->ptr,sdslen(obj->ptr));           WIN_PORT_FIX /* cast (int) */
     } else {
@@ -783,7 +783,7 @@ int rioWriteBulkObject(rio *r, robj *obj) {
 
 /* Emit the commands needed to rebuild a list object.
  * The function returns 0 on error, 1 on success. */
-int rewriteListObject(rio *r, robj *key, robj *o) {
+int rewriteListObject(rio *r, robj *key, robj *o) {//列表其实分为两种情况 一种是压缩列表 一种是双向列表  可以看双向列表的写入方式，压缩列表的差不多
     PORT_LONGLONG count = 0, items = listTypeLength(o);
 
     if (o->encoding == REDIS_ENCODING_ZIPLIST) {
@@ -793,7 +793,7 @@ int rewriteListObject(rio *r, robj *key, robj *o) {
         unsigned int vlen;
         PORT_LONGLONG vlong;
 
-        while(ziplistGet(p,&vstr,&vlen,&vlong)) {
+        while(ziplistGet(p,&vstr,&vlen,&vlong)) {//获取压缩列表中的元素
             if (count == 0) {
                 int cmd_items = (items > REDIS_AOF_REWRITE_ITEMS_PER_CMD) ?
                     REDIS_AOF_REWRITE_ITEMS_PER_CMD : (int)items;               WIN_PORT_FIX /* cast (int) */
@@ -816,11 +816,11 @@ int rewriteListObject(rio *r, robj *key, robj *o) {
         listNode *ln;
         listIter li;
 
-        listRewind(list,&li);
+        listRewind(list,&li);//获取列表的迭代器
         while((ln = listNext(&li))) {
             robj *eleobj = listNodeValue(ln);
 
-            if (count == 0) {
+            if (count == 0) {//如果count==0 那么写入item的个数 个数不超过REDIS_AOF_REWRITE_ITEMS_PER_CMD
                 int cmd_items = (items > REDIS_AOF_REWRITE_ITEMS_PER_CMD) ?
                     REDIS_AOF_REWRITE_ITEMS_PER_CMD : (int)items;               WIN_PORT_FIX /* cast (int) */
 
@@ -828,7 +828,7 @@ int rewriteListObject(rio *r, robj *key, robj *o) {
                 if (rioWriteBulkString(r,"RPUSH",5) == 0) return 0;
                 if (rioWriteBulkObject(r,key) == 0) return 0;
             }
-            if (rioWriteBulkObject(r,eleobj) == 0) return 0;
+            if (rioWriteBulkObject(r,eleobj) == 0) return 0;//将逐个对象写入文件
             if (++count == REDIS_AOF_REWRITE_ITEMS_PER_CMD) count = 0;
             items--;
         }
@@ -1047,8 +1047,8 @@ int rewriteAppendOnlyFile(char *filename) {
 
     /* Note that we have to use a different temp name here compared to the
      * one used by rewriteAppendOnlyFileBackground() function. */
-    snprintf(tmpfile,256,"temp-rewriteaof-%d.aof", (int) getpid());
-    fp = fopen(tmpfile,IF_WIN32("wb","w"));
+    snprintf(tmpfile,256,"temp-rewriteaof-%d.aof", (int) getpid());//重写文件的路径
+    fp = fopen(tmpfile,IF_WIN32("wb","w"));//打开重写文件
     if (!fp) {
         redisLog(REDIS_WARNING, "Opening the temp file for AOF rewrite in rewriteAppendOnlyFile(): %s", strerror(errno));
         return REDIS_ERR;
@@ -1058,23 +1058,23 @@ int rewriteAppendOnlyFile(char *filename) {
     rioInitWithFile(&aof,fp);
     if (server.aof_rewrite_incremental_fsync)
         rioSetAutoSync(&aof,REDIS_AOF_AUTOSYNC_BYTES);
-    for (j = 0; j < server.dbnum; j++) {
+    for (j = 0; j < server.dbnum; j++) {//遍历所有数据库
         char selectcmd[] = "*2\r\n$6\r\nSELECT\r\n";
-        redisDb *db = server.db+j;
-        dict *d = db->dict;
-        if (dictSize(d) == 0) continue;
-        di = dictGetSafeIterator(d);
+        redisDb *db = server.db+j;//或取当前数据库对象
+        dict *d = db->dict;//获取当前数据库的哈希对象
+        if (dictSize(d) == 0) continue;//当前数据为空 continue
+        di = dictGetSafeIterator(d);//获取当前哈希表的迭代器
         if (!di) {
             fclose(fp);
             return REDIS_ERR;
         }
 
         /* SELECT the new DB */
-        if (rioWrite(&aof,selectcmd,sizeof(selectcmd)-1) == 0) goto werr;
+        if (rioWrite(&aof,selectcmd,sizeof(selectcmd)-1) == 0) goto werr;//如果迭代器已经获取 那么写入select命令
         if (rioWriteBulkLongLong(&aof,j) == 0) goto werr;
 
         /* Iterate this DB writing every entry */
-        while((de = dictNext(di)) != NULL) {
+        while((de = dictNext(di)) != NULL) {//遍历字典中的每一项 获得KV
             sds keystr;
             robj key, *o;
             PORT_LONGLONG expiretime;
@@ -1086,17 +1086,17 @@ int rewriteAppendOnlyFile(char *filename) {
             expiretime = getExpire(db,&key);
 
             /* If this key is already expired skip it */
-            if (expiretime != -1 && expiretime < now) continue;
+            if (expiretime != -1 && expiretime < now) continue;//如果当前KV已经超期，那么不再写入aof
 
             /* Save the key and associated value */
             if (o->type == REDIS_STRING) {
                 /* Emit a SET command */
                 char cmd[]="*3\r\n$3\r\nSET\r\n";
-                if (rioWrite(&aof,cmd,sizeof(cmd)-1) == 0) goto werr;
+                if (rioWrite(&aof,cmd,sizeof(cmd)-1) == 0) goto werr;//将cmd内容刷入文件
                 /* Key and value */
-                if (rioWriteBulkObject(&aof,&key) == 0) goto werr;
-                if (rioWriteBulkObject(&aof,o) == 0) goto werr;
-            } else if (o->type == REDIS_LIST) {
+                if (rioWriteBulkObject(&aof,&key) == 0) goto werr;//将key刷入文件   
+                if (rioWriteBulkObject(&aof,o) == 0) goto werr;//将O刷入文件
+            } else if (o->type == REDIS_LIST) {//将列表刷入AOF文件
                 if (rewriteListObject(&aof,&key,o) == 0) goto werr;
             } else if (o->type == REDIS_SET) {
                 if (rewriteSetObject(&aof,&key,o) == 0) goto werr;
@@ -1108,7 +1108,7 @@ int rewriteAppendOnlyFile(char *filename) {
                 redisPanic("Unknown object type");
             }
             /* Save the expire time */
-            if (expiretime != -1) {
+            if (expiretime != -1) {//如果一个KEY有过期时间 那么也一并写入文件
                 char cmd[]="*3\r\n$9\r\nPEXPIREAT\r\n";
                 if (rioWrite(&aof,cmd,sizeof(cmd)-1) == 0) goto werr;
                 if (rioWriteBulkObject(&aof,&key) == 0) goto werr;
@@ -1301,13 +1301,13 @@ int rewriteAppendOnlyFileBackground(void) {
     start = ustime();
 
 #ifndef _WIN32
-    if ((childpid = fork()) == 0) {
+    if ((childpid = fork()) == 0) {//AOF 重写 不是AOF
 #endif
         char tmpfile[256];
 
 #ifndef _WIN32
         /* Child */
-        closeListeningSockets(0);
+        closeListeningSockets(0);//关闭子进程的监听端口 免得和主进程竞争
         redisSetProcTitle("redis-aof-rewrite");
 #endif
         snprintf(tmpfile,256,"temp-rewriteaof-bg-%d.aof", (int) getpid());
