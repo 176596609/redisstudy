@@ -1889,7 +1889,7 @@ int clientsArePaused(void) {
  * write, close sequence needed to serve a client.
  *
  * The function returns the total number of events processed. */
-int processEventsWhileBlocked(void) {
+int processEventsWhileBlocked(void) {//在加载AOF或者RDB文件的中间 处理些网络事件 可以回复用户LOADING
     int iterations = 4; /* See the function top-comment. */
     int count = 0;
     while (iterations--) {
