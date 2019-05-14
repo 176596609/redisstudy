@@ -62,13 +62,13 @@ int rdbSaveType(rio *rdb, unsigned char type) {
 /* Load a "type" in RDB format, that is a one byte unsigned integer.
  * This function is not only used to load object types, but also special
  * "types" like the end-of-file type, the EXPIRE type, and so forth. */
-int rdbLoadType(rio *rdb) {
+int rdbLoadType(rio *rdb) {//加载rdb类型   一个字节
     unsigned char type;
     if (rioRead(rdb,&type,1) == 0) return -1;
     return type;
 }
 
-time_t rdbLoadTime(rio *rdb) {
+time_t rdbLoadTime(rio *rdb) {//读取四个字节长的时间进来 s
     int32_t t32;
     if (rioRead(rdb,&t32,4) == 0) return -1;
     return (time_t)t32;
@@ -79,7 +79,7 @@ int rdbSaveMillisecondTime(rio *rdb, PORT_LONGLONG t) {
     return rdbWriteRaw(rdb,&t64,8);
 }
 
-PORT_LONGLONG rdbLoadMillisecondTime(rio *rdb) {
+PORT_LONGLONG rdbLoadMillisecondTime(rio *rdb) {//读取8个字节长的时间进来 ms
     int64_t t64;
     if (rioRead(rdb,&t64,8) == 0) return -1;
     return (PORT_LONGLONG)t64;
@@ -117,28 +117,28 @@ int rdbSaveLen(rio *rdb, uint32_t len) {
 /* Load an encoded length. The "isencoded" argument is set to 1 if the length
  * is not actually a length but an "encoding type". See the REDIS_RDB_ENC_*
  * definitions in rdb.h for more information. */
-uint32_t rdbLoadLen(rio *rdb, int *isencoded) {
+uint32_t rdbLoadLen(rio *rdb, int *isencoded) {//读取下一步要读取的长度  isencoded表示是否被压缩
     unsigned char buf[2];
     uint32_t len;
     int type;
 
     if (isencoded) *isencoded = 0;
     if (rioRead(rdb,buf,1) == 0) return REDIS_RDB_LENERR;
-    type = (buf[0]&0xC0)>>6;
+    type = (buf[0]&0xC0)>>6;//取出前两个位
     if (type == REDIS_RDB_ENCVAL) {
         /* Read a 6 bit encoding type. */
-        if (isencoded) *isencoded = 1;
-        return buf[0]&0x3F;
+        if (isencoded) *isencoded = 1;//encode=true
+        return buf[0]&0x3F;//返回后面6个位
     } else if (type == REDIS_RDB_6BITLEN) {
         /* Read a 6 bit len. */
-        return buf[0]&0x3F;
+        return buf[0]&0x3F;//返回后面6个位
     } else if (type == REDIS_RDB_14BITLEN) {
         /* Read a 14 bit len. */
-        if (rioRead(rdb,buf+1,1) == 0) return REDIS_RDB_LENERR;
-        return ((buf[0]&0x3F)<<8)|buf[1];
+        if (rioRead(rdb,buf+1,1) == 0) return REDIS_RDB_LENERR;//再读取一个字节 8位
+        return ((buf[0]&0x3F)<<8)|buf[1];//00111111<<8 | buf[1]  8+6=14位
     } else {
         /* Read a 32 bit len. */
-        if (rioRead(rdb,&len,4) == 0) return REDIS_RDB_LENERR;
+        if (rioRead(rdb,&len,4) == 0) return REDIS_RDB_LENERR;//读取四个字节也就是一个整数int
         return ntohl(len);
     }
 }
@@ -339,13 +339,13 @@ int rdbSaveStringObject(rio *rdb, robj *obj) {
     }
 }
 
-robj *rdbGenericLoadStringObject(rio *rdb, int encode) {
+robj *rdbGenericLoadStringObject(rio *rdb, int encode) {//读取RDB的文件内容出来  字符串可能被压缩了
     int isencoded;
     uint32_t len;
     robj *o;
 
     len = rdbLoadLen(rdb,&isencoded);
-    if (isencoded) {
+    if (isencoded) {//如果被压缩了
         switch(len) {
         case REDIS_RDB_ENC_INT8:
         case REDIS_RDB_ENC_INT16:
@@ -357,11 +357,11 @@ robj *rdbGenericLoadStringObject(rio *rdb, int encode) {
             redisPanic("Unknown RDB encoding type");
         }
     }
-
+	//如果没有被压缩
     if (len == REDIS_RDB_LENERR) return NULL;
     o = encode ? createStringObject(NULL,len) :
                  createRawStringObject(NULL,len);
-    if (len && rioRead(rdb,o->ptr,len) == 0) {
+    if (len && rioRead(rdb,o->ptr,len) == 0) {//读取二进制安全的数据出来
         decrRefCount(o);
         return NULL;
     }
@@ -492,10 +492,10 @@ int rdbSaveObjectType(rio *rdb, robj *o) {
 
 /* Use rdbLoadType() to load a TYPE in RDB format, but returns -1 if the
  * type is not specifically a valid Object Type. */
-int rdbLoadObjectType(rio *rdb) {
+int rdbLoadObjectType(rio *rdb) {//读取一个字节的类型
     int type;
     if ((type = rdbLoadType(rdb)) == -1) return -1;
-    if (!rdbIsObjectType(type)) return -1;
+    if (!rdbIsObjectType(type)) return -1;//检查是不是已知类型
     return type;
 }
 
@@ -855,11 +855,11 @@ robj *rdbLoadObject(int rdbtype, rio *rdb) {
 
     if (rdbtype == REDIS_RDB_TYPE_STRING) {
         /* Read string value */
-        if ((o = rdbLoadEncodedStringObject(rdb)) == NULL) return NULL;
+        if ((o = rdbLoadEncodedStringObject(rdb)) == NULL) return NULL;//如果是字符串 直接读取字符串对象
         o = tryObjectEncoding(o);
     } else if (rdbtype == REDIS_RDB_TYPE_LIST) {
         /* Read list value */
-        if ((len = rdbLoadLen(rdb,NULL)) == REDIS_RDB_LENERR) return NULL;
+        if ((len = rdbLoadLen(rdb,NULL)) == REDIS_RDB_LENERR) return NULL;//如果是列表 那么就先获取列表的长度
 
         /* Use a real list when there are too many entries */
         if (len > server.list_max_ziplist_entries) {
@@ -1159,7 +1159,7 @@ void rdbLoadProgressCallback(rio *r, const void *buf, size_t len) {
 int rdbLoad(char *filename) {
     uint32_t dbid;
     int type, rdbver;
-    redisDb *db = server.db+0;
+    redisDb *db = server.db+0;//默认写入数据库0
     char buf[1024];
     PORT_LONGLONG expiretime, now = mstime();
     FILE *fp;
@@ -1170,15 +1170,15 @@ int rdbLoad(char *filename) {
     rioInitWithFile(&rdb,fp);
     rdb.update_cksum = rdbLoadProgressCallback;
     rdb.max_processing_chunk = server.loading_process_events_interval_bytes;
-    if (rioRead(&rdb,buf,9) == 0) goto eoferr;
+    if (rioRead(&rdb,buf,9) == 0) goto eoferr;//对read调用进行了封装
     buf[9] = '\0';
-    if (memcmp(buf,"REDIS",5) != 0) {
+    if (memcmp(buf,"REDIS",5) != 0) {//检查是不是redis文件
         fclose(fp);
         redisLog(REDIS_WARNING,"Wrong signature trying to load DB from file");
         errno = EINVAL;
         return REDIS_ERR;
     }
-    rdbver = atoi(buf+5);
+    rdbver = atoi(buf+5);//检查rdb文件的版本号 如果>6就退出
     if (rdbver < 1 || rdbver > REDIS_RDB_VERSION) {
         fclose(fp);
         redisLog(REDIS_WARNING,"Can't handle RDB format version %d",rdbver);
@@ -1186,21 +1186,21 @@ int rdbLoad(char *filename) {
         return REDIS_ERR;
     }
 
-    startLoading(fp);
+    startLoading(fp);//初始化
     while(1) {
         robj *key, *val;
         expiretime = -1;
 
         /* Read type. */
         if ((type = rdbLoadType(&rdb)) == -1) goto eoferr;
-        if (type == REDIS_RDB_OPCODE_EXPIRETIME) {
+        if (type == REDIS_RDB_OPCODE_EXPIRETIME) {//如果是时间 s
             if ((expiretime = rdbLoadTime(&rdb)) == -1) goto eoferr;
             /* We read the time so we need to read the object type again. */
             if ((type = rdbLoadType(&rdb)) == -1) goto eoferr;
             /* the EXPIRETIME opcode specifies time in seconds, so convert
              * into milliseconds. */
-            expiretime *= 1000;
-        } else if (type == REDIS_RDB_OPCODE_EXPIRETIME_MS) {
+            expiretime *= 1000;//转换为ms
+        } else if (type == REDIS_RDB_OPCODE_EXPIRETIME_MS) {//如果是时间 ms
             /* Milliseconds precision expire times introduced with RDB
              * version 3. */
             if ((expiretime = rdbLoadMillisecondTime(&rdb)) == -1) goto eoferr;
@@ -1208,22 +1208,22 @@ int rdbLoad(char *filename) {
             if ((type = rdbLoadType(&rdb)) == -1) goto eoferr;
         }
 
-        if (type == REDIS_RDB_OPCODE_EOF)
+        if (type == REDIS_RDB_OPCODE_EOF)//读取到了文件末尾type了 退出循环
             break;
 
         /* Handle SELECT DB opcode as a special case */
-        if (type == REDIS_RDB_OPCODE_SELECTDB) {
+        if (type == REDIS_RDB_OPCODE_SELECTDB) {//如果是db type
             if ((dbid = rdbLoadLen(&rdb,NULL)) == REDIS_RDB_LENERR)
                 goto eoferr;
-            if (dbid >= (unsigned)server.dbnum) {
+            if (dbid >= (unsigned)server.dbnum) {//RDB文件比当前的redis配置文件或者默认数据库个数多 那么退出整个进程
                 redisLog(REDIS_WARNING,"FATAL: Data file was created with a Redis server configured to handle more than %d databases. Exiting\n", server.dbnum);
                 exit(1);
             }
-            db = server.db+dbid;
+            db = server.db+dbid;//选择当前数据库
             continue;
         }
         /* Read key */
-        if ((key = rdbLoadStringObject(&rdb)) == NULL) goto eoferr;
+        if ((key = rdbLoadStringObject(&rdb)) == NULL) goto eoferr;//读取key key必然是字符串
         /* Read value */
         if ((val = rdbLoadObject(type,&rdb)) == NULL) goto eoferr;
         /* Check if the key already expired. This function is used when loading
