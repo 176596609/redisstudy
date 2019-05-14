@@ -773,7 +773,7 @@ int rdbSave(char *filename) {
         return REDIS_ERR;
     }
     redisLog(REDIS_NOTICE,"DB saved on disk");
-    server.dirty = 0;
+    server.dirty = 0;//rdb结束后重置这个值
     server.lastsave = time(NULL);
     server.lastbgsave_status = REDIS_OK;
     return REDIS_OK;
@@ -1574,7 +1574,7 @@ int rdbSaveToSlavesSockets(void) {
     return REDIS_OK; /* unreached */
 }
 
-void saveCommand(redisClient *c) {
+void saveCommand(redisClient *c) {//保存RDB文件  会阻塞进程  
     if (server.rdb_child_pid != -1) {
         addReplyError(c,"Background save already in progress");
         return;

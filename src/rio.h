@@ -58,7 +58,7 @@ struct _rio {
     uint64_t cksum;
 
     /* number of bytes read or written */
-    size_t processed_bytes;
+    size_t processed_bytes;//记录读写了多少byte
 
     /* maximum single read or write chunk size */
     size_t max_processing_chunk;

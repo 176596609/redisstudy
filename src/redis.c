@@ -1216,7 +1216,7 @@ int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData
     } else {
         /* If there is not a background saving/rewrite in progress check if
          * we have to save/rewrite now */
-         for (j = 0; j < server.saveparamslen; j++) {
+         for (j = 0; j < server.saveparamslen; j++) {//检查是否要触发RDB保存
             struct saveparam *sp = server.saveparams+j;
 
             /* Save if we reached the given amount of changes,
@@ -3607,7 +3607,7 @@ int checkForSentinelMode(int argc, char **argv) {
 }
 
 /* Function called at startup to load RDB or AOF file in memory. */
-void loadDataFromDisk(void) {
+void loadDataFromDisk(void) {//从硬盘加载数据 如果AOF已经开启了 优先从AOF加载 因为AOF的刷新频率会高很多
     PORT_LONGLONG start = ustime();
     if (server.aof_state == REDIS_AOF_ON) {
         if (loadAppendOnlyFile(server.aof_filename) == REDIS_OK)//加载AOF文件

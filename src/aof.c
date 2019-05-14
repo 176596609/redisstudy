@@ -840,10 +840,10 @@ int rewriteListObject(rio *r, robj *key, robj *o) {//列表其实分为两种情况 一种是
 
 /* Emit the commands needed to rebuild a set object.
  * The function returns 0 on error, 1 on success. */
-int rewriteSetObject(rio *r, robj *key, robj *o) {
+int rewriteSetObject(rio *r, robj *key, robj *o) {//集合有两种实现方式 1 整形集合 2哈希表
     PORT_LONGLONG count = 0, items = setTypeSize(o);
 
-    if (o->encoding == REDIS_ENCODING_INTSET) {
+    if (o->encoding == REDIS_ENCODING_INTSET) {//如果是整形集合
         int ii = 0;
         int64_t llval;
 
@@ -860,13 +860,13 @@ int rewriteSetObject(rio *r, robj *key, robj *o) {
             if (++count == REDIS_AOF_REWRITE_ITEMS_PER_CMD) count = 0;
             items--;
         }
-    } else if (o->encoding == REDIS_ENCODING_HT) {
-        dictIterator *di = dictGetIterator(o->ptr);
+    } else if (o->encoding == REDIS_ENCODING_HT) {//如果是哈希表
+        dictIterator *di = dictGetIterator(o->ptr);//获取哈希表的迭代器
         dictEntry *de;
 
         while((de = dictNext(di)) != NULL) {
-            robj *eleobj = dictGetKey(de);
-            if (count == 0) {
+            robj *eleobj = dictGetKey(de);//获取迭代器对应的key
+            if (count == 0) {//如果items大于  64(REDIS_AOF_REWRITE_ITEMS_PER_CMD) 那么就拆开放  SADD KEY XX1 XX2
                 int cmd_items = (items > REDIS_AOF_REWRITE_ITEMS_PER_CMD) ?
                     REDIS_AOF_REWRITE_ITEMS_PER_CMD : (int)items;               WIN_PORT_FIX /* cast (int) */
 
@@ -992,17 +992,17 @@ int rewriteHashObject(rio *r, robj *key, robj *o) {
 
     hi = hashTypeInitIterator(o);
     while (hashTypeNext(hi) != REDIS_ERR) {
-        if (count == 0) {
+        if (count == 0) {//最多写64个
             int cmd_items = (int)((items > REDIS_AOF_REWRITE_ITEMS_PER_CMD) ?   WIN_PORT_FIX /* cast (int) */
                 REDIS_AOF_REWRITE_ITEMS_PER_CMD : items);
 
-            if (rioWriteBulkCount(r,'*',2+cmd_items*2) == 0) return 0;
-            if (rioWriteBulkString(r,"HMSET",5) == 0) return 0;
-            if (rioWriteBulkObject(r,key) == 0) return 0;
+            if (rioWriteBulkCount(r,'*',2+cmd_items*2) == 0) return 0;//命令参数个数  注意cmd_items*2  HMSET website google www.google.com yahoo www.yahoo.com  HMSET key field value [field value …]
+            if (rioWriteBulkString(r,"HMSET",5) == 0) return 0;//写入 HMSET
+            if (rioWriteBulkObject(r,key) == 0) return 0;//写入KEY
         }
 
-        if (rioWriteHashIteratorCursor(r, hi, REDIS_HASH_KEY) == 0) return 0;
-        if (rioWriteHashIteratorCursor(r, hi, REDIS_HASH_VALUE) == 0) return 0;
+        if (rioWriteHashIteratorCursor(r, hi, REDIS_HASH_KEY) == 0) return 0;//写入KEY
+        if (rioWriteHashIteratorCursor(r, hi, REDIS_HASH_VALUE) == 0) return 0;//写入value
         if (++count == REDIS_AOF_REWRITE_ITEMS_PER_CMD) count = 0;
         items--;
     }
@@ -1098,12 +1098,12 @@ int rewriteAppendOnlyFile(char *filename) {
                 if (rioWriteBulkObject(&aof,o) == 0) goto werr;//将O刷入文件
             } else if (o->type == REDIS_LIST) {//将列表刷入AOF文件
                 if (rewriteListObject(&aof,&key,o) == 0) goto werr;
-            } else if (o->type == REDIS_SET) {
+            } else if (o->type == REDIS_SET) {//集合中的数据刷到AOF文件
                 if (rewriteSetObject(&aof,&key,o) == 0) goto werr;
-            } else if (o->type == REDIS_ZSET) {
+            } else if (o->type == REDIS_ZSET) {//有序集合  跳跃表+压缩列表
                 if (rewriteSortedSetObject(&aof,&key,o) == 0) goto werr;
             } else if (o->type == REDIS_HASH) {
-                if (rewriteHashObject(&aof,&key,o) == 0) goto werr;
+                if (rewriteHashObject(&aof,&key,o) == 0) goto werr;//重写哈希表
             } else {
                 redisPanic("Unknown object type");
             }

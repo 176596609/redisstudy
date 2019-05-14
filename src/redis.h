@@ -798,15 +798,15 @@ struct redisServer {
                                       to child process. */
     sds aof_child_diff;             /* AOF diff accumulator child side. */
     /* RDB persistence */
-    PORT_LONGLONG dirty;                /* Changes to DB from the last save */  //如果服务器修改一个键 那么就会自增这个键 这个记数可能会触发持久化或者复制操作
+    PORT_LONGLONG dirty;                /* Changes to DB from the last save */  //如果服务器修改一个键 那么就会自增这个键 这个记数可能会触发持久化（RDB）rdb结束后会把这个记数改为0
     PORT_LONGLONG dirty_before_bgsave;  /* Used to restore dirty on failed BGSAVE */
     pid_t rdb_child_pid;            /* PID of RDB saving child */
-    struct saveparam *saveparams;   /* Save points array for RDB */
+    struct saveparam *saveparams;   /* Save points array for RDB */ // 配置文件 save 900 1  900s内至少修改一次 那么就执行一次RDB保存
     int saveparamslen;              /* Number of saving points */
     char *rdb_filename;             /* Name of RDB file */
     int rdb_compression;            /* Use compression in RDB? */
     int rdb_checksum;               /* Use RDB checksum? */
-    time_t lastsave;                /* Unix time of last successful save */
+    time_t lastsave;                /* Unix time of last successful save  上次成功执行save或者BGSAVE的时间戳 */
     time_t lastbgsave_try;          /* Unix time of last attempted bgsave */
     time_t rdb_save_time_last;      /* Time used by last RDB save run. */
     time_t rdb_save_time_start;     /* Current RDB save start time. */

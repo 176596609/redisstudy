@@ -259,13 +259,13 @@ int hashTypeDelete(robj *o, robj *field) {
 }
 
 /* Return the number of elements in a hash. */
-PORT_ULONG hashTypeLength(robj *o) {
+PORT_ULONG hashTypeLength(robj *o) {//获取哈希表的长度
     PORT_ULONG length = PORT_ULONG_MAX;
 
     if (o->encoding == REDIS_ENCODING_ZIPLIST) {
-        length = ziplistLen(o->ptr) / 2;
+        length = ziplistLen(o->ptr) / 2;//压缩列表的长度除以2就是哈希表的长度
     } else if (o->encoding == REDIS_ENCODING_HT) {
-        length = (PORT_ULONG)dictSize((dict*)o->ptr);                           WIN_PORT_FIX /* cast (PORT_ULONG) */
+        length = (PORT_ULONG)dictSize((dict*)o->ptr);                           WIN_PORT_FIX /* cast (PORT_ULONG) */  //获取哈希列表的大小
     } else {
         redisPanic("Unknown hash encoding");
     }
@@ -273,7 +273,7 @@ PORT_ULONG hashTypeLength(robj *o) {
     return length;
 }
 
-hashTypeIterator *hashTypeInitIterator(robj *subject) {
+hashTypeIterator *hashTypeInitIterator(robj *subject) {//获取哈希表的迭代器
     hashTypeIterator *hi = zmalloc(sizeof(hashTypeIterator));
     hi->subject = subject;
     hi->encoding = subject->encoding;

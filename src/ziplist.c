@@ -679,7 +679,7 @@ unsigned char *ziplistPush(unsigned char *zl, unsigned char *s, unsigned int sle
 /* Returns an offset to use for iterating with ziplistNext. When the given
  * index is negative, the list is traversed back to front. When the list
  * doesn't contain an element at the provided index, NULL is returned. */
-unsigned char *ziplistIndex(unsigned char *zl, int index) {
+unsigned char *ziplistIndex(unsigned char *zl, int index) {//获取压缩列表 第index位指向的值
     unsigned char *p;
     unsigned int prevlensize, prevlen = 0;
     if (index < 0) {
@@ -693,8 +693,8 @@ unsigned char *ziplistIndex(unsigned char *zl, int index) {
             }
         }
     } else {
-        p = ZIPLIST_ENTRY_HEAD(zl);
-        while (p[0] != ZIP_END && index--) {
+        p = ZIPLIST_ENTRY_HEAD(zl);//获取第一个元素的指针
+        while (p[0] != ZIP_END && index--) {//逐步定位到index指向的地方
             p += zipRawEntryLength(p);
         }
     }
