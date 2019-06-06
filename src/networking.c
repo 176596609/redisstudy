@@ -1114,12 +1114,12 @@ static void setProtocolError(redisClient *c, int pos) {
     sdsrange(c->querybuf,pos,-1);
 }
 
-int processMultibulkBuffer(redisClient *c) {
-    char *newline = NULL;
+int processMultibulkBuffer(redisClient *c) {//¶ÔÓÚset a 1ÕâÌõÃüÁî£¬server¶ËÊÕµ½µÄÄÚÈİÓ¦¸ÃÊÇ: *3\r\n$3\r\nset\r\n$1\r\na\r\n$1\r\n1\r\n£º
+    char *newline = NULL;//  SET msg ¡°helloworld¡±   *3\r\n$3\r\nSET\r\n$3\r\nmsg\r\n$11\r\nhelloworld\r\n
     int pos = 0, ok;
     PORT_LONGLONG ll;
 
-    if (c->multibulklen == 0) {
+    if (c->multibulklen == 0) {//µÚÒ»´Î½øÀ´µÄÊ±ºò Õâ¶ù¿Ï¶¨ÊÇ0
         /* The client should have been reset */
         redisAssertWithInfo(c,NULL,c->argc == 0);
 
@@ -1134,38 +1134,38 @@ int processMultibulkBuffer(redisClient *c) {
         }
 
         /* Buffer should also contain \n */
-        if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))
+        if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))//Èç¹ûµÚÒ»¸ö\rÖ®Ç°Êı¾İ²¿·ÖµÄ³¤¶È´óÓÚÕû¸ö¶ÁÈ¡ÄÚÈİ³¤¶È¼õ2£¬¾Í·µ»Ø´íÎó
             return REDIS_ERR;
 
         /* We know for sure there is a whole line since newline != NULL,
          * so go ahead and find out the multi bulk length. */
         redisAssertWithInfo(c,NULL,c->querybuf[0] == '*');
-        ok = string2ll(c->querybuf+1,newline-(c->querybuf+1),&ll);
+        ok = string2ll(c->querybuf+1,newline-(c->querybuf+1),&ll);//»ñÈ¡*3
         if (!ok || ll > 1024*1024) {
             addReplyError(c,"Protocol error: invalid multibulk length");
             setProtocolError(c,pos);
             return REDIS_ERR;
         }
 
-        pos = (int)((newline-c->querybuf)+2);                                   WIN_PORT_FIX /* cast (int) */
+        pos = (int)((newline-c->querybuf)+2);                                   WIN_PORT_FIX /* cast (int) */ //¼ÇÂ¼ÏÂÒ»ĞĞµÄÎ»ÖÃ
         if (ll <= 0) {
             sdsrange(c->querybuf,pos,-1);
             return REDIS_OK;
         }
 
-        c->multibulklen = (int)ll;                                              WIN_PORT_FIX /* cast (int) */
+        c->multibulklen = (int)ll;                                              WIN_PORT_FIX /* cast (int) */   /* ÕâÒ»¿ébulk²ÎÊıµÄÊıÁ¿ */
 
         /* Setup argv array on client structure */
         if (c->argv) zfree(c->argv);
-        c->argv = zmalloc(sizeof(robj*)*c->multibulklen);
+        c->argv = zmalloc(sizeof(robj*)*c->multibulklen);//²ÎÊıÊı×éÉêÇë multibulklen¸ö²ÎÊı
     }
 
     redisAssertWithInfo(c,NULL,c->multibulklen > 0);
-    while(c->multibulklen) {
+    while(c->multibulklen) {  /* ¿ªÊ¼½âÎöÃ¿Ò»¸öbulkµÄÊı¾İ¡£*/
         /* Read bulk length if unknown */
         if (c->bulklen == -1) {
-            newline = strchr(c->querybuf+pos,'\r');
-            if (newline == NULL) {
+            newline = strchr(c->querybuf+pos,'\r');//¼ì²éÏÂÒ»¸ö²ÎÊı ¿´ÄÜ·ñÕÒµ½/r
+            if (newline == NULL) {//Ã»ÓĞÕÒµ½\r ·µ»Øerror
                 if (sdslen(c->querybuf) > REDIS_INLINE_MAX_SIZE) {
                     addReplyError(c,
                         "Protocol error: too big bulk count string");
@@ -1176,10 +1176,10 @@ int processMultibulkBuffer(redisClient *c) {
             }
 
             /* Buffer should also contain \n */
-            if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))
+            if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))//¼ì²éºÏ·¨ĞÔ
                 break;
 
-            if (c->querybuf[pos] != '$') {
+            if (c->querybuf[pos] != '$') {//Èç¹ûÕâÒ»ĞĞµÄµÚÒ»¸ö²»ÊÇ$·û£¬ÄÇÃ´ËµÃ÷ÊÇ·Ç·¨Öµ
                 addReplyErrorFormat(c,
                     "Protocol error: expected '$', got '%c'",
                     c->querybuf[pos]);
@@ -1187,30 +1187,30 @@ int processMultibulkBuffer(redisClient *c) {
                 return REDIS_ERR;
             }
 
-            ok = string2ll(c->querybuf+pos+1,newline-(c->querybuf+pos+1),&ll);
+            ok = string2ll(c->querybuf+pos+1,newline-(c->querybuf+pos+1),&ll); /* ½âÎö'$'ºóÃæ¸úµÄÊı×Ö£¬±íÊ¾ºó½ÓµÄ²ÎÊı(×Ö·û´®±íÊ¾)µÄ³¤¶È */
             if (!ok || ll < 0 || ll > 512*1024*1024) {
                 addReplyError(c,"Protocol error: invalid bulk length");
                 setProtocolError(c,pos);
                 return REDIS_ERR;
             }
 
-            pos += (int)(newline-(c->querybuf+pos)+2);                          WIN_PORT_FIX /* cast (int) */
-            if (ll >= REDIS_MBULK_BIG_ARG) {
+            pos += (int)(newline-(c->querybuf+pos)+2);                          WIN_PORT_FIX /* cast (int) *//* ¼ÇÂ¼ÏÂÒ»ĞĞµÄÎ»ÖÃ */
+            if (ll >= REDIS_MBULK_BIG_ARG) {//Èç¹ûµ±Ç°²ÎÊı´óÓÚ32K
                 size_t qblen;
 
                 /* If we are going to read a large object from network
                  * try to make it likely that it will start at c->querybuf
                  * boundary so that we can optimize object creation
                  * avoiding a large copy of data. */
-                sdsrange(c->querybuf,pos,-1);
+                sdsrange(c->querybuf,pos,-1);//Èç¹ûÎÒÃÇÒª´ÓÍøÂçÖĞ¶ÁÈ¡Ò»¸ö´ó¶ÔÏó£¬³¢ÊÔÊ¹Ëü¿ÉÄÜ´Óc-> querybuf±ß½ç¿ªÊ¼£¬ÕâÑùÎÒÃÇ¾Í¿ÉÒÔÓÅ»¯¶ÔÏó´´½¨£¬±ÜÃâ´óÁ¿¿½±´Êı¾İ¡£  /* ½ØÈ¡ÏÂÒ»ĞĞÒ»Ö±µ½Ä©Î²µÄ×Ó´® */ 
                 pos = 0;
                 qblen = sdslen(c->querybuf);
                 /* Hint the sds library about the amount of bytes this string is
                  * going to contain. */
-                if (qblen < (size_t)ll+2)
+                if (qblen < (size_t)ll+2)/* Èç¹û×Ó´®³¤¶ÈĞ¡ÓÚ'$'ºóÃæÖ¸Ê¾µÄ³¤¶È£¬ËµÃ÷ÕâÒ»´ÎÃ»ÓĞ¶ÁÈ¡ÍêÊı¾İ£¬Òò´ËÔÚquerybufÉÏmake room£¬È·±£ÏÂÒ»´Î¶ÁÈ¡ÍêÕûbulkµÄÊı¾İ */
                     c->querybuf = sdsMakeRoomFor(c->querybuf,ll+2-qblen);
             }
-            c->bulklen = (PORT_LONG) ll;                                        WIN_PORT_FIX /* cast (PORT_LONG) */
+            c->bulklen = (PORT_LONG) ll;                                        WIN_PORT_FIX /* cast (PORT_LONG) */ /* ÕâÒ»¸ö²ÎÊıµÄ³¤¶È */
         }
 
         /* Read bulk argument */
@@ -1225,7 +1225,7 @@ int processMultibulkBuffer(redisClient *c) {
                 c->bulklen >= REDIS_MBULK_BIG_ARG &&
                 (signed) sdslen(c->querybuf) == c->bulklen+2)
             {
-                c->argv[c->argc++] = createObject(REDIS_STRING,c->querybuf);
+                c->argv[c->argc++] = createObject(REDIS_STRING,c->querybuf);    /* createObjectÊÇÖ±½ÓÊ¹ÓÃÁËquerybuf±íÊ¾µÄ¿Õ¼ä£¬ËùÒÔÏÂÃæĞèÒªÔÙ´´Ôì³öÁíÒ»¸öÏàÍ¬³¤¶ÈµÄ¿ÕµÄbuffer */
                 sdsIncrLen(c->querybuf,-2); /* remove CRLF */
                 c->querybuf = sdsempty();
                 /* Assume that if we saw a fat argument we'll see another one
@@ -1243,10 +1243,10 @@ int processMultibulkBuffer(redisClient *c) {
     }
 
     /* Trim to pos */
-    if (pos) sdsrange(c->querybuf,pos,-1);
+    if (pos) sdsrange(c->querybuf,pos,-1);/* Èç¹ûpos·Ç0£¬½ØÈ¡Ê£ÏÂµÄ²¿·Ö */
 
     /* We're done when c->multibulk == 0 */
-    if (c->multibulklen == 0) return REDIS_OK;
+    if (c->multibulklen == 0) return REDIS_OK;/* ËùÓĞbulkÊı¾İ¶¼´¦ÀíÍê³É */
 
     /* Still not read to process the command */
     return REDIS_ERR;
@@ -1267,14 +1267,14 @@ void processInputBuffer(redisClient *c) {
         if (c->flags & REDIS_CLOSE_AFTER_REPLY) return;
 
         /* Determine request type when unknown. */
-        if (!c->reqtype) {
+        if (!c->reqtype) {//Èç¹ûreqtype=0 ÄÇÃ´¿´ÏÂÕâ¸ö¿Í»§¶Ë·¢µÄÊÇÄÄÖÖÇëÇó
             if (c->querybuf[0] == '*') {
                 c->reqtype = REDIS_REQ_MULTIBULK;
             } else {
                 c->reqtype = REDIS_REQ_INLINE;
             }
         }
-
+		//Ö»ÓĞbufferÖĞ°üº¬Ò»¸öÍêÕûÇëÇóÊ±£¬ÕâÁ½¸öº¯Êı²Å»á½âÎö³É¹¦·µ»ØREDIS_OK£¬½ÓÏÂÀ´»á´¦ÀíÃüÁî¡£·ñÔò£¬»áÌø³öÍâ²¿µÄwhileÑ­»·£¬µÈ´ıÏÂÒ»´ÎÊÂ¼şÑ­»·ÔÙ´Ósocket¶ÁÈ¡Ê£ÓàµÄÊı¾İ£¬ÔÙ½øĞĞ½âÎö¡£
         if (c->reqtype == REDIS_REQ_INLINE) {
             if (processInlineBuffer(c) != REDIS_OK) break;
         } else if (c->reqtype == REDIS_REQ_MULTIBULK) {
@@ -1288,7 +1288,7 @@ void processInputBuffer(redisClient *c) {
             resetClient(c);
         } else {
             /* Only reset the client when the command was executed. */
-            if (processCommand(c) == REDIS_OK)
+            if (processCommand(c) == REDIS_OK)//´¦ÀíÃüÁî
                 resetClient(c);
         }
     }
@@ -1312,39 +1312,39 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {//¶
     if (c->reqtype == REDIS_REQ_MULTIBULK && c->multibulklen && c->bulklen != -1
         && c->bulklen >= REDIS_MBULK_BIG_ARG)
     {
-        int remaining = (int)((unsigned)(c->bulklen+2)-sdslen(c->querybuf));    WIN_PORT_FIX /* cast (int) */
+        int remaining = (int)((unsigned)(c->bulklen+2)-sdslen(c->querybuf));    WIN_PORT_FIX /* cast (int) */  //»ñÈ¡µ±Ç°²ÎÊıĞèÒª¶ÁÈ¡µÄÖ±½ÓÊı
 
         if (remaining < readlen) readlen = remaining;
     }
 
-    qblen = sdslen(c->querybuf);
+    qblen = sdslen(c->querybuf);//µ±Ç°BUFÒÑ¾­Ê¹ÓÃµÄ³¤¶È
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
-    c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
-    nread = (int)read(fd, c->querybuf+qblen, readlen);                          WIN_PORT_FIX /* cast (int) */
+    c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);//¼ì²éµ±Ç°¿Õ¼äÊÇ·ñ»¹ÓĞreadlenµÄ¿Õ¼ä Ã»ÓĞµÄ»°¾ÍÀ©Èİ
+    nread = (int)read(fd, c->querybuf+qblen, readlen);                          WIN_PORT_FIX /* cast (int) */ //Ïñµ±Ç°BUF¶ÁÈ¡readlenµÄÄÚÈİ
     if (nread == -1) {
         if (errno == EAGAIN) {
-            nread = 0;
+            nread = 0;//Ã»ÓĞ¶ÁÈ¡µ½ĞÅÏ¢ ĞèÒªÖØĞÂ¶ÁÈ¡
         } else {
-            redisLog(REDIS_VERBOSE, "Reading from client: %s",IF_WIN32(wsa_strerror(errno),strerror(errno)));
+            redisLog(REDIS_VERBOSE, "Reading from client: %s",IF_WIN32(wsa_strerror(errno),strerror(errno)));//³ö´í ¶Ï¿ª¿Í»§¶Ë
             freeClient(c);
             return;
         }
     } else if (nread == 0) {
-        redisLog(REDIS_VERBOSE, "Client closed connection");
+        redisLog(REDIS_VERBOSE, "Client closed connection");//³ö´í ¶Ï¿ª¿Í»§¶Ë 
         freeClient(c);
         return;
     }
     WIN32_ONLY(WSIOCP_QueueNextRead(fd);)
     if (nread) {
-        sdsIncrLen(c->querybuf,nread);
-        c->lastinteraction = server.unixtime;
+        sdsIncrLen(c->querybuf,nread);//ĞŞ¸ÄbufµÄ³¤¶È
+        c->lastinteraction = server.unixtime;//ĞŞ¸ÄºÍ·şÎñÆ÷×îºóÒ»´ÎÍ¨ĞÅÊ±¼ä
         if (c->flags & REDIS_MASTER) c->reploff += nread;
-        server.stat_net_input_bytes += nread;
+        server.stat_net_input_bytes += nread;//·şÎñÆ÷½ÓÊÕµÄÁ÷Á¿×ÜÁ¿Ôö¼Ó
     } else {
         server.current_client = NULL;
         return;
     }
-    if (sdslen(c->querybuf) > server.client_max_querybuf_len) {
+    if (sdslen(c->querybuf) > server.client_max_querybuf_len) {//Èç¹û¿Í»§¶ËÇëÇóµÄBUF³¬³ö×î´óÏŞ¶È ÄÇÃ´Ö±½Ó¹Ø±Õ²¢ÊÍ·ÅÖÕ¶Ë
         sds ci = catClientInfoString(sdsempty(),c), bytes = sdsempty();
 
         bytes = sdscatrepr(bytes,c->querybuf,64);
@@ -1354,7 +1354,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {//¶
         freeClient(c);
         return;
     }
-    processInputBuffer(c);
+    processInputBuffer(c);//½âÎöÇëÇó
     server.current_client = NULL;
 }
 

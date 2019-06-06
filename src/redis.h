@@ -548,8 +548,8 @@ typedef struct redisClient {
     robj **argv;//命令参数数组
     struct redisCommand *cmd, *lastcmd;
     int reqtype;
-    int multibulklen;       /* number of multi bulk arguments left to read */
-    PORT_LONG bulklen;           /* length of bulk argument in multi bulk request */
+    int multibulklen;       /* number of multi bulk arguments left to read 有多少个参数需要读*/
+    PORT_LONG bulklen;           /* length of bulk argument in multi bulk request  貌似是每个参数的长度 */
     list *reply;//redis输出链表
     PORT_ULONG reply_bytes; /* Tot bytes of objects in reply list */
     int sentlen;            /* Amount of bytes already sent in the current
