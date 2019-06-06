@@ -743,7 +743,7 @@ struct redisServer {
     PORT_LONGLONG slowlog_log_slower_than; /* SLOWLOG time limit (to get logged) */
     PORT_ULONG slowlog_max_len;     /* SLOWLOG max number of items logged */
     size_t resident_set_size;       /* RSS sampled in serverCron(). */
-    PORT_LONGLONG stat_net_input_bytes; /* Bytes read from network. */
+    PORT_LONGLONG stat_net_input_bytes; /* Bytes read from network. 网络上读取的数据*/
     PORT_LONGLONG stat_net_output_bytes; /* Bytes written to network. */
     /* The following two are used to track instantaneous metrics, like
      * number of operations per second, network traffic. */

@@ -862,21 +862,21 @@ robj *rdbLoadObject(int rdbtype, rio *rdb) {
         if ((len = rdbLoadLen(rdb,NULL)) == REDIS_RDB_LENERR) return NULL;//如果是列表 那么就先获取列表的长度
 
         /* Use a real list when there are too many entries */
-        if (len > server.list_max_ziplist_entries) {
+        if (len > server.list_max_ziplist_entries) {//创建一个列表
             o = createListObject();
         } else {
             o = createZiplistObject();
         }
 
         /* Load every single element of the list */
-        while(len--) {
+        while(len--) {//逐个加载每个元素
             if ((ele = rdbLoadEncodedStringObject(rdb)) == NULL) return NULL;
 
             /* If we are using a ziplist and the value is too big, convert
              * the object to a real list. */
             if (o->encoding == REDIS_ENCODING_ZIPLIST &&
                 sdsEncodedObject(ele) &&
-                sdslen(ele->ptr) > server.list_max_ziplist_value)
+                sdslen(ele->ptr) > server.list_max_ziplist_value)//如果元素太多了 转换成链表
                     listTypeConvert(o,REDIS_ENCODING_LINKEDLIST);
 
             if (o->encoding == REDIS_ENCODING_ZIPLIST) {
@@ -886,7 +886,7 @@ robj *rdbLoadObject(int rdbtype, rio *rdb) {
                 decrRefCount(ele);
             } else {
                 ele = tryObjectEncoding(ele);
-                listAddNodeTail(o->ptr,ele);
+                listAddNodeTail(o->ptr,ele);//添加到队列尾部
             }
         }
     } else if (rdbtype == REDIS_RDB_TYPE_SET) {
