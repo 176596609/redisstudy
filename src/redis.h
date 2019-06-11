@@ -559,7 +559,7 @@ typedef struct redisClient {
     time_t obuf_soft_limit_reached_time;//超过服务端软性限制的时间
     int flags;              /* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */
     int authenticated;      /* when requirepass is non-NULL 客户端是否通过了认证*/
-    int replstate;          /* replication state if this is a slave */
+    int replstate;          /* replication state if this is a slave  从属复制状态  我的理解是个状态机 */
     int repl_put_online_on_ack; /* Install slave write handler on ACK. */
     int repldbfd;           /* replication DB file descriptor */
     off_t repldboff;        /* replication DB file offset */
@@ -826,7 +826,7 @@ struct redisServer {
     int slaveseldb;                 /* Last SELECTed DB in replication output */
     PORT_LONGLONG master_repl_offset;   /* Global replication offset */
     int repl_ping_slave_period;     /* Master pings the slave every N seconds */
-    char *repl_backlog;             /* Replication backlog for partial syncs */
+    char *repl_backlog;             /* Replication backlog（积压） for partial syncs 部分同步的复制积压*/
     PORT_LONGLONG repl_backlog_size;    /* Backlog circular buffer size */
     PORT_LONGLONG repl_backlog_histlen; /* Backlog actual data length */
     PORT_LONGLONG repl_backlog_idx;     /* Backlog circular buffer current offset */

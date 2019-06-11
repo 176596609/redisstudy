@@ -677,7 +677,7 @@ static void freeClientArgv(redisClient *c) {
 /* Close all the slaves connections. This is useful in chained replication
  * when we resync with our own master and want to force all our slaves to
  * resync with us as well. */
-void disconnectSlaves(void) {
+void disconnectSlaves(void) {//关闭所有从客户端的链接
     while (listLength(server.slaves)) {
         listNode *ln = listFirst(server.slaves);
         freeClient((redisClient*)ln->value);

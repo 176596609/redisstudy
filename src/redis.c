@@ -2196,7 +2196,7 @@ int processCommand(redisClient *c) {//处理命令
      * go through checking for replication and QUIT will cause trouble
      * when FORCE_REPLICATION is enabled and would be implemented in
      * a regular command proc. */
-    if (!strcasecmp(c->argv[0]->ptr,"quit")) {
+    if (!strcasecmp(c->argv[0]->ptr,"quit")) {//quit 命令特殊处理 /* 在这个调用流程上，如果processCommand返回了REDIS_OK，client会被reset掉，所以这里只是打上REDIS_CLOSE_AFTER_REPLY的标记并返回REDIS_ERR */
         addReply(c,shared.ok);
         c->flags |= REDIS_CLOSE_AFTER_REPLY;
         return REDIS_ERR;
@@ -2294,7 +2294,7 @@ int processCommand(redisClient *c) {//处理命令
         server.repl_min_slaves_to_write &&
         server.repl_min_slaves_max_lag &&
         c->cmd->flags & REDIS_CMD_WRITE &&
-        server.repl_good_slaves_count < server.repl_min_slaves_to_write)
+        server.repl_good_slaves_count < server.repl_min_slaves_to_write)//如果链接状态比较好的从服务器小于repl_min_slaves_to_write这个数量 那么禁止写入命令执行。参考CAP原则
     {
         flagTransaction(c);
         addReply(c, shared.noreplicaserr);
@@ -2303,7 +2303,7 @@ int processCommand(redisClient *c) {//处理命令
 
     /* Don't accept write commands if this is a read only slave. But
      * accept write commands if this is our master. */
-    if (server.masterhost && server.repl_slave_ro &&
+    if (server.masterhost && server.repl_slave_ro &&//禁止向从服务器执行写命令  (可以通过配置修改这一点)
         !(c->flags & REDIS_MASTER) &&
         c->cmd->flags & REDIS_CMD_WRITE)
     {

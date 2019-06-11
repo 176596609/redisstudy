@@ -412,7 +412,7 @@ int replicationSetupSlaveForFullResync(redisClient *slave, PORT_LONGLONG offset)
  *
  * On success return REDIS_OK, otherwise REDIS_ERR is returned and we proceed
  * with the usual full resync. */
-int masterTryPartialResynchronization(redisClient *c) {
+int masterTryPartialResynchronization(redisClient *c) {//成功返回REDIS_OK，否则返回REDIS_ERR，我们继续与通常的完全重新同步。
     PORT_LONGLONG psync_offset, psync_len;
     char *master_runid = c->argv[1]->ptr;
     char buf[128];
@@ -421,26 +421,26 @@ int masterTryPartialResynchronization(redisClient *c) {
     /* Is the runid of this master the same advertised by the wannabe slave
      * via PSYNC? If runid changed this master is a different instance and
      * there is no way to continue. */
-    if (strcasecmp(master_runid, server.runid)) {
+    if (strcasecmp(master_runid, server.runid)) {//检查客户端保存的runid和服务端当前的runid是否一致  不一致的话要触发全量同步
         /* Run id "?" is used by slaves that want to force a full resync. */
-        if (master_runid[0] != '?') {
+        if (master_runid[0] != '?') {//不一致的话看 第一个ID字符是不是? 不是的话那说明从服务器之前连的不是这个主服务器
             redisLog(REDIS_NOTICE,"Partial resynchronization not accepted: "
                 "Runid mismatch (Client asked for runid '%s', my runid is '%s')",
                 master_runid, server.runid);
         } else {
-            redisLog(REDIS_NOTICE,"Full resync requested by slave %s",
+            redisLog(REDIS_NOTICE,"Full resync requested by slave %s",//如果第一个字符是? 那说明从服务器刚刚第一次连上主服务器
                 replicationGetSlaveName(c));
         }
         goto need_full_resync;
     }
 
     /* We still have the data our slave is asking for? */
-    if (getLongLongFromObjectOrReply(c,c->argv[2],&psync_offset,NULL) !=
+    if (getLongLongFromObjectOrReply(c,c->argv[2],&psync_offset,NULL) !=//获取从服务器现在保存的偏移量
        REDIS_OK) goto need_full_resync;
-    if (!server.repl_backlog ||
+    if (!server.repl_backlog ||//检查复制积压数据内 能否找到用户需要的数据
         psync_offset < server.repl_backlog_off ||
         psync_offset > (server.repl_backlog_off + server.repl_backlog_histlen))
-    {
+    {//无法找到数据 返回错误 并启动全量同步
         redisLog(REDIS_NOTICE,
             "Unable to partial resync with slave %s for lack of backlog (Slave request was: %lld).", replicationGetSlaveName(c), psync_offset);
         if (psync_offset > server.master_repl_offset) {
@@ -450,12 +450,12 @@ int masterTryPartialResynchronization(redisClient *c) {
         goto need_full_resync;
     }
 
-    /* If we reached this point, we are able to perform a partial resync:
+    /* If we reached this point, we are able to perform a partial resync:走到这一步说明 可以增量同步积压数据了
      * 1) Set client state to make it a slave.
      * 2) Inform the client we can continue with +CONTINUE
      * 3) Send the backlog data (from the offset to the end) to the slave. */
     c->flags |= REDIS_SLAVE;
-    c->replstate = REDIS_REPL_ONLINE;
+    c->replstate = REDIS_REPL_ONLINE;// RDB file transmitted, sending just updates
     c->repl_ack_time = server.unixtime;
     c->repl_put_online_on_ack = 0;
     listAddNodeTail(server.slaves,c);
@@ -560,7 +560,7 @@ int startBgsaveForReplication(int mincapa) {
 }
 
 /* SYNC and PSYNC command implemenation. */
-void syncCommand(redisClient *c) {
+void syncCommand(redisClient *c) {//服务器收到终端发来的sync命令？？？
     /* ignore SYNC if already slave or in monitor mode */
     if (c->flags & REDIS_SLAVE) return;
 
@@ -593,7 +593,7 @@ void syncCommand(redisClient *c) {
      * So the slave knows the new runid and offset to try a PSYNC later
      * if the connection with the master is lost. */
     if (!strcasecmp(c->argv[0]->ptr,"psync")) {
-        if (masterTryPartialResynchronization(c) == REDIS_OK) {
+        if (masterTryPartialResynchronization(c) == REDIS_OK) {//增量同步
             server.stat_sync_partial_ok++;
             return; /* No full resync needed, return. */
         } else {
@@ -609,11 +609,11 @@ void syncCommand(redisClient *c) {
         /* If a slave uses SYNC, we are dealing with an old implementation
          * of the replication protocol (like redis-cli --slave). Flag the client
          * so that we don't expect to receive REPLCONF ACK feedbacks. */
-        c->flags |= REDIS_PRE_PSYNC;
+        c->flags |= REDIS_PRE_PSYNC;//pre PSYNC 表明这是个旧的SYNC协议  因此我们不希望收到REPLCONF ACK反馈
     }
 
     /* Full resynchronization. */
-    server.stat_sync_full++;
+    server.stat_sync_full++;//全量同步
 
     /* Setup the slave as one waiting for BGSAVE to start. The following code
      * paths will change the state if we handle the slave differently. */
@@ -1883,7 +1883,7 @@ void slaveofCommand(redisClient *c) {
         }
         /* There was no previous master or the user specified a different one,
          * we can continue. */
-        replicationSetMaster(c->argv[1]->ptr, (int)port);                       WIN_PORT_FIX /* cast (int) */
+        replicationSetMaster(c->argv[1]->ptr, (int)port);                       WIN_PORT_FIX /* cast (int) *///agrv[1]ip agrv[2]port
         sds client = catClientInfoString(sdsempty(),c);
         redisLog(REDIS_NOTICE,"SLAVE OF %s:%d enabled (user request from '%s')",
             server.masterhost, server.masterport, client);
