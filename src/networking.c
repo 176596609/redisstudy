@@ -177,7 +177,7 @@ int prepareClientToWrite(redisClient *c) {
      * slaves, if the client can actually receive writes. */
     if (c->bufpos == 0 && listLength(c->reply) == 0 &&
         (c->replstate == REDIS_REPL_NONE ||
-         (c->replstate == REDIS_REPL_ONLINE && !c->repl_put_online_on_ack)))
+         (c->replstate == REDIS_REPL_ONLINE && !c->repl_put_online_on_ack)))//在从节点的复制状态变为REDIS_REPL_ONLINE之前，是不能将命令流发送给从节点的。因此，需要在prepareClientToWrite函数中进行特殊处理。上面的代码保证了，当从节点客户端的复制状态尚未真正的变为REDIS_REPL_ONLINE时，是不会注册socket描述符上的可写事件的。
     {
         /* Try to install the write handler. */
         if (aeCreateFileEvent(server.el, c->fd, AE_WRITABLE,

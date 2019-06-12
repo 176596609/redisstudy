@@ -1274,7 +1274,7 @@ int serverCron(struct aeEventLoop *eventLoop, PORT_LONGLONG id, void *clientData
 
     /* Replication cron function -- used to reconnect to master and
      * to detect transfer failures. */
-    run_with_period(1000) replicationCron();
+    run_with_period(1000) replicationCron();//每s运行一次积压缓存相关函数
 
     /* Run the Redis Cluster cron. */
     run_with_period(100) {
@@ -2074,7 +2074,7 @@ struct redisCommand *lookupCommandOrOriginal(sds name) {
  * + REDIS_PROPAGATE_AOF (propagate into the AOF file if is enabled)
  * + REDIS_PROPAGATE_REPL (propagate into the replication link)
  */
-void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,//传播命令到AOF或者备份服务器
+void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,//传播命令到AOF或者备份SLAVE服务器
                int flags)
 {
     if (server.aof_state != REDIS_AOF_OFF && flags & REDIS_PROPAGATE_AOF)
@@ -2157,7 +2157,7 @@ void call(redisClient *c, int flags) {
 
         if (c->flags & REDIS_FORCE_REPL) flags |= REDIS_PROPAGATE_REPL;
         if (c->flags & REDIS_FORCE_AOF) flags |= REDIS_PROPAGATE_AOF;
-        if (dirty)
+        if (dirty)//dirty表示在执行命令处理函数时，数据库状态是否发生了变化。只要dirty不为0，就会为flags增加REDIS_PROPAGATE_REPL和REDIS_PROPAGATE_AOF标记。从而调用propagate，该函数会调用replicationFeedSlaves将该命令传播给从节点。
             flags |= (REDIS_PROPAGATE_REPL | REDIS_PROPAGATE_AOF);
         if (flags != REDIS_PROPAGATE_NONE)
             propagate(c->cmd,c->db->id,c->argv,c->argc,flags);
@@ -2324,7 +2324,7 @@ int processCommand(redisClient *c) {//处理命令
 
     /* Only allow INFO and SLAVEOF when slave-serve-stale-data is no and
      * we are a slave with a broken link with master. */
-    if (server.masterhost && server.repl_state != REDIS_REPL_CONNECTED &&
+    if (server.masterhost && server.repl_state != REDIS_REPL_CONNECTED &&//如果我们是个从节点 而且正在连接主节点 拒绝执行命令      如果当前Redis实例是其他主节点的从节点，并且该从节点的复制状态不是REDIS_REPL_CONNECTED，说明当前的从节点实例，还没有到接收并加载完其主节点发来的RDB数据的步骤
         server.repl_serve_stale_data == 0 &&
         !(c->cmd->flags & REDIS_CMD_STALE))
     {

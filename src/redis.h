@@ -300,10 +300,10 @@ POSIX_ONLY(#define REDIS_MAX_LOGMSG_LEN    1024) /* Default maximum length of sy
  * In SEND_BULK and ONLINE state the slave receives new updates
  * in its output queue. In the WAIT_BGSAVE state instead the server is waiting
  * to start the next background saving in order to send updates to it. */
-#define REDIS_REPL_WAIT_BGSAVE_START 14 /* We need to produce a new RDB file. */
-#define REDIS_REPL_WAIT_BGSAVE_END 15 /* Waiting RDB file creation to finish. */
-#define REDIS_REPL_SEND_BULK 16 /* Sending RDB file to slave. */
-#define REDIS_REPL_ONLINE 17 /* RDB file transmitted, sending just updates. */
+#define REDIS_REPL_WAIT_BGSAVE_START 14 /* We need to produce a new RDB file.我们需要启动一个生成rdb进程 */
+#define REDIS_REPL_WAIT_BGSAVE_END 15 /* Waiting RDB file creation to finish. 等待rdb文件生成完成*/
+#define REDIS_REPL_SEND_BULK 16 /* Sending RDB file to slave. 发送RDB到从服务器*/
+#define REDIS_REPL_ONLINE 17 /* RDB file transmitted, sending just updates.RDB发送结束，只需要正常传输命令方可 */
 
 /* Slave capabilities. */
 #define SLAVE_CAPA_NONE 0
@@ -561,10 +561,10 @@ typedef struct redisClient {
     int authenticated;      /* when requirepass is non-NULL 客户端是否通过了认证*/
     int replstate;          /* replication state if this is a slave  从属复制状态  我的理解是个状态机 */
     int repl_put_online_on_ack; /* Install slave write handler on ACK. */
-    int repldbfd;           /* replication DB file descriptor */
-    off_t repldboff;        /* replication DB file offset */
-    off_t repldbsize;       /* replication DB file size */
-    sds replpreamble;       /* replication DB preamble. */
+    int repldbfd;           /* replication（复制） DB file descriptor  表示打开的RDB文件描述符 */
+    off_t repldboff;        /* replication DB file offset 表示已经向从节点发送的RDB数据的字节数*/
+    off_t repldbsize;       /* replication DB file size 表示RDB文件的大小*/
+    sds replpreamble;       /* replication DB preamble（开场白）. 为需要发送给从节点客户端的RDB文件的长度信息   "$<length>\r\n" 见sendBulkToSlave*/
     PORT_LONGLONG reploff;      /* replication offset if this is our master */
     PORT_LONGLONG repl_ack_off; /* replication ack offset, if this is a slave */
     PORT_LONGLONG repl_ack_time;/* replication ack time, if this is a slave */
@@ -573,7 +573,7 @@ typedef struct redisClient {
                                        should use. */
     char replrunid[REDIS_RUN_ID_SIZE+1]; /* master run id if this is a master */
     int slave_listening_port; /* As configured with: SLAVECONF listening-port */
-    int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. */
+    int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. 表示从节点的"能力"，也就是是否能接受无硬盘复制的RDB数据。如果选项server.repl_diskless_sync为真，并且参数mincapa中包含SLAVE_CAPA_EOF标记，说明可以为该从节点直接发送无硬盘复制的RDB数据，因此调用rdbSaveToSlavesSockets，直接在后台将RDB数据通过socket发送给所有状态为REDIS_REPL_WAIT_BGSAVE_START的从节点；*/
     multiState mstate;      /* MULTI/EXEC state */
     int btype;              /* Type of blocking op if REDIS_BLOCKED. */
     blockingState bpop;     /* blocking state */
@@ -824,13 +824,13 @@ struct redisServer {
     POSIX_ONLY(int syslog_facility;)            /* Syslog facility */
     /* Replication (master) */
     int slaveseldb;                 /* Last SELECTed DB in replication output */
-    PORT_LONGLONG master_repl_offset;   /* Global replication offset */
+    PORT_LONGLONG master_repl_offset;   /* Global replication offset 积压缓存区全局的偏移*/
     int repl_ping_slave_period;     /* Master pings the slave every N seconds */
-    char *repl_backlog;             /* Replication backlog（积压） for partial syncs 部分同步的复制积压*/
-    PORT_LONGLONG repl_backlog_size;    /* Backlog circular buffer size */
-    PORT_LONGLONG repl_backlog_histlen; /* Backlog actual data length */
-    PORT_LONGLONG repl_backlog_idx;     /* Backlog circular buffer current offset */
-    PORT_LONGLONG repl_backlog_off;     /* Replication offset of first byte in the
+    char *repl_backlog;             /* Replication backlog（积压） for partial syncs 部分同步的复制积压 是个环形队列*/
+    PORT_LONGLONG repl_backlog_size;    /* Backlog circular buffer size 积压缓存的大小 环形队列的容量*/
+    PORT_LONGLONG repl_backlog_histlen; /* Backlog actual data length 积压缓存的实际大小，也就是已经使用的大小*/
+    PORT_LONGLONG repl_backlog_idx;     /* Backlog circular buffer current offset 积压缓存其实是个环形缓存，队列尾部  环形缓冲复制队列空闲起始位置（写从这里开始）*/
+    PORT_LONGLONG repl_backlog_off;     /* Replication offset of first byte in the 环形缓存对应的第一字节的位置  全局缓存的偏移量   数据在环形缓冲复制队列的起始位置（读从这里开始）
                                        backlog buffer. */
     time_t repl_backlog_time_limit; /* Time without slaves after the backlog
                                        gets released. */

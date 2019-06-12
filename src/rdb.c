@@ -785,7 +785,7 @@ werr:
     return REDIS_ERR;
 }
 
-int rdbSaveBackground(char *filename) {
+int rdbSaveBackground(char *filename) {//启动RDB进程保存RDB文件
     pid_t childpid;
     PORT_LONGLONG start;
 
@@ -802,9 +802,9 @@ int rdbSaveBackground(char *filename) {
         int retval;
 
         /* Child */
-        closeListeningSockets(0);
+        closeListeningSockets(0);//关闭监听套接字等 免得跟master争抢客户端发来的连接请求
         redisSetProcTitle("redis-rdb-bgsave");
-        retval = rdbSave(filename);
+        retval = rdbSave(filename);//保存rdb文件
         if (retval == REDIS_OK) {
             size_t private_dirty = zmalloc_get_private_dirty();
 
@@ -1271,16 +1271,16 @@ eoferr: /* unexpected end of file is handled here with a fatal exit */
 /* A background saving child (BGSAVE) terminated its work. Handle this.
  * This function covers the case of actual BGSAVEs. */
 void backgroundSaveDoneHandlerDisk(int exitcode, int bysignal) {
-    if (!bysignal && exitcode == 0) {
+    if (!bysignal && exitcode == 0) {//正常退出
         redisLog(REDIS_NOTICE,
             "Background saving terminated with success");
         server.dirty = server.dirty - server.dirty_before_bgsave;
         server.lastsave = time(NULL);
         server.lastbgsave_status = REDIS_OK;
-    } else if (!bysignal && exitcode != 0) {
+    } else if (!bysignal && exitcode != 0) {//正常退出 方式返回值不是0
         redisLog(REDIS_WARNING, "Background saving error");
         server.lastbgsave_status = REDIS_ERR;
-    } else {
+    } else {//被信号终止的异常退出
         mstime_t latency;
 
         redisLog(REDIS_WARNING,
