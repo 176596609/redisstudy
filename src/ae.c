@@ -433,12 +433,12 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 	    /* note the fe->mask & mask & ... code: maybe an already processed
              * event removed an element that fired and we still didn't
              * processed, so we check if the event is still valid. */
-            if (fe->mask & mask & AE_READABLE) {
-                rfired = 1;
+            if (fe->mask & mask & AE_READABLE) {// 注意，有这样一种情况，比如描述符3和4都有事件触发了，在3的事件回调函数中，调用aeDeleteFileEvent将4的注册事件删除了。这样在处理描述符4时，就不应该再次调用4的回调函数了。
+                rfired = 1;//以，每次调用事件回调函数之前，都判断该描述符上的注册事件是否还有效。
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
             }
             if (fe->mask & mask & AE_WRITABLE) {
-                if (!rfired || fe->wfileProc != fe->rfileProc)
+                if (!rfired || fe->wfileProc != fe->rfileProc)//而且如果可读和可写事件的回调函数相同的话，只能调用一次该函数。
                     fe->wfileProc(eventLoop,fd,fe->clientData,mask);
             }
             processed++;

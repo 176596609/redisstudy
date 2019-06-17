@@ -548,7 +548,7 @@ typedef struct redisClient {
     robj **argv;//命令参数数组
     struct redisCommand *cmd, *lastcmd;
     int reqtype;
-    int multibulklen;       /* number of multi bulk arguments left to read 有多少个参数需要读*/
+    int multibulklen;       /* number of multi bulk arguments left to read 有多少个参数需要读   记录正在解析的一条完整的命令请求中，尚未处理的命令参数的个数。如果c->multibulklen为0，说明当前要解析的是命令请求的开头，格式为"*<n>\r\n"*/
     PORT_LONG bulklen;           /* length of bulk argument in multi bulk request  貌似是每个参数的长度 */
     list *reply;//redis输出链表
     PORT_ULONG reply_bytes; /* Tot bytes of objects in reply list */
@@ -700,7 +700,7 @@ struct redisServer {
     int bindaddr_count;         /* Number of addresses in server.bindaddr[] */
     char *unixsocket;           /* UNIX socket path */
     mode_t unixsocketperm;      /* UNIX socket permission */
-    int ipfd[REDIS_BINDADDR_MAX]; /* TCP socket file descriptors *///redis绑定的多个网卡获得的套接字数组  也就是监听套接字数组
+    int ipfd[REDIS_BINDADDR_MAX]; /* TCP socket file descriptors *///redis绑定的多个网卡获得的套接字数组  也就是监听套接字数组  REDIS_BINDADDR_MAX(16)，因此最多只支持16个监听地址。
     int ipfd_count;             /* Used slots in ipfd[] *///绑定了几个fd
     int sofd;                   /* Unix socket file descriptor */
     int cfd[REDIS_BINDADDR_MAX];/* Cluster bus listening socket */
@@ -775,7 +775,7 @@ struct redisServer {
     pid_t aof_child_pid;            /* PID if rewriting process */
     list *aof_rewrite_buf_blocks;   /* Hold changes during an AOF rewrite. */ //子进程在AOF的时候，主进程的写动作要记录到这个缓存当中，这样最后AOF文件里面的内容就能一致了
     sds aof_buf;      /* AOF buffer, written before entering the event loop */
-    int aof_fd;       /* File descriptor of currently selected AOF file */
+    int aof_fd;       /* File descriptor of currently selected AOF file AOF文件FD*/
     int aof_selected_db; /* Currently selected DB in AOF */
     time_t aof_flush_postponed_start; /* UNIX time of postponed AOF flush */
     time_t aof_last_fsync;            /* UNIX time of last fsync() */

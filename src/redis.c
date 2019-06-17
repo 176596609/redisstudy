@@ -1906,7 +1906,7 @@ void initServer(void) {
      * domain sockets. */
     for (j = 0; j < server.ipfd_count; j++) {
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,//针对监听套接字获取注册读取事件
-            acceptTcpHandler,NULL) == AE_ERR)
+            acceptTcpHandler,NULL) == AE_ERR)//然后，针对每个监听描述符，调用aeCreateFileEvent，注册其上的可读事件，回调函数为acceptTcpHandler
             {
                 redisPanic(
                     "Unrecoverable error creating server.ipfd file event.");

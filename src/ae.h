@@ -85,15 +85,15 @@ typedef struct aeFiredEvent {
 
 /* State of an event based program */
 typedef struct aeEventLoop {
-    int maxfd;   /* highest file descriptor currently registered */ //当前注册的最大fd，ps linux fd是递增的 windows则不是 但是这个redis用hook的方式强制将windows的fd映射成了自增的
+    int maxfd;   /* highest file descriptor currently registered */ //当前注册的最大fd，ps linux fd是递增的 windows则不是 但是这个redis用hook的方式强制将windows的fd映射成了自增的   maxfd：当前处理的最大的描述符的值，主要是在select中使用；
     int setsize; /* max number of file descriptors tracked */ //最多允许多少个客户端
     PORT_LONGLONG timeEventNextId;
-    time_t lastTime;     /* Used to detect system clock skew */
+    time_t lastTime;     /* Used to detect system clock skew 为了处理时间事件而记录的Unix时间戳，主要为了在系统时间被调整打乱时能够尽快的处理时间事件；*/
     aeFileEvent *events; /* Registered events */ //指针数组 setsize这么大
     aeFiredEvent *fired; /* Fired events */ //指针数组 setsize这么大
     aeTimeEvent *timeEventHead;//定时器指针链表
     int stop;//redis是否停止了
-    void *apidata; /* This is used for polling API specific data */
+    void *apidata; /* This is used for polling API specific data  表示具体的底层多路复用所使用的数据结构，比如对于select来说，该结构中保存了读写描述符数组；对于epoll来说，该结构中保存了epoll描述符，以及epoll_event结构数组； */
     aeBeforeSleepProc *beforesleep;
 } aeEventLoop;
 

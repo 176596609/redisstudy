@@ -627,7 +627,7 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(mask);
     REDIS_NOTUSED(privdata);
 
-    while(max--) {
+    while(max--) {//¸Ãº¯ÊıÃ¿´Î×î¶à´¦ÀíMAX_ACCEPTS_PER_CALL(1000)¸öÁ¬½Ó£¬Èç¹û»¹ÓĞÆäËûÁ¬½Ó£¬ÔòµÈµ½ÏÂ´Îµ÷ÓÃacceptTcpHandlerÊ±ÔÙ´¦Àí£¬ÕâÑù×öµÄÔ­ÒòÊÇÎªÁË±£Ö¤¸Ãº¯ÊıµÄÖ´ĞĞÊ±¼ä²»»á¹ı³¤£¬ÒÔÃâÓ°ÏìºóĞøÊÂ¼şµÄ´¦Àí
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);//acceptµÄ·â×° ¼æÈİip V4ºÍV6
         if (cfd == ANET_ERR) {
             if (errno != EWOULDBLOCK) {
@@ -1027,7 +1027,7 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
 #endif
 
 /* resetClient prepare the client to process the next command */
-void resetClient(redisClient *c) {
+void resetClient(redisClient *c) {//ÖØÖÃ¿Í»§¶Ë×´Ì¬£¬Ò²¾ÍÊÇÊÍ·Åc->argvÊı×éÖĞµÄÔªËØ£¬ÖÃc->argc¡¢c->reqtypeºÍc->multibulklenÎª0£¬ÖÃc->bulklenÎª-1µÈ¡£È»ºó½Ó×Å´¦Àíc->querybufÖĞÊ£ÏÂµÄÄÚÈİ
     redisCommandProc *prevcmd = c->cmd ? c->cmd->proc : NULL;
 
     freeClientArgv(c);
@@ -1110,7 +1110,7 @@ static void setProtocolError(redisClient *c, int pos) {
             "Protocol error from client: %s", client);
         sdsfree(client);
     }
-    c->flags |= REDIS_CLOSE_AFTER_REPLY;
+    c->flags |= REDIS_CLOSE_AFTER_REPLY;//¿Í»§¶Ë±êÖ¾Î»c->flagsÔö¼ÓREDIS_CLOSE_AFTER_REPLY±ê¼Ç
     sdsrange(c->querybuf,pos,-1);
 }
 
@@ -1124,9 +1124,9 @@ int processMultibulkBuffer(redisClient *c) {//¶ÔÓÚset a 1ÕâÌõÃüÁî£¬server¶ËÊÕµ½µ
         redisAssertWithInfo(c,NULL,c->argc == 0);
 
         /* Multi bulk length cannot be read without a \r\n */
-        newline = strchr(c->querybuf,'\r');
+        newline = strchr(c->querybuf,'\r');//ÏÈÕÒµ½c->querybufÖĞµÄµÚÒ»¸ö'\r'µÄÎ»ÖÃnewline£¬Èç¹ûc->querybufÖĞÕÒ²»µ½'\r'£¬ËµÃ÷ÊÕµ½µÄ¿Í»§¶ËµÄÇëÇóÉĞ²»ÍêÕû
         if (newline == NULL) {
-            if (sdslen(c->querybuf) > REDIS_INLINE_MAX_SIZE) {
+            if (sdslen(c->querybuf) > REDIS_INLINE_MAX_SIZE) {//Èç¹ûc->querybufÄ¿Ç°³¤¶È³¬¹ı64kµÄ»°£¬Ôò·´À¡¸ø¿Í»§¶Ë´íÎóĞÅÏ¢£º"Protocol error: too big mbulk count string"
                 addReplyError(c,"Protocol error: too big mbulk count string");
                 setProtocolError(c,0);
             }
@@ -1264,32 +1264,32 @@ void processInputBuffer(redisClient *c) {
         /* REDIS_CLOSE_AFTER_REPLY closes the connection once the reply is
          * written to the client. Make sure to not let the reply grow after
          * this flag has been set (i.e. don't process more commands). */
-        if (c->flags & REDIS_CLOSE_AFTER_REPLY) return;
+        if (c->flags & REDIS_CLOSE_AFTER_REPLY) return;//    Èç¹û¿Í»§¶Ë±êÖ¾c->flags°üº¬REDIS_CLOSE_AFTER_REPLY£¬ÔòÖ±½Ó·µ»Ø¡£¸Ã±êÖ¾±íÃ÷·¢ÉúÁËÒì³££¬·şÎñÆ÷²»ÔÙĞèÒª´¦Àí¿Í»§¶ËÇëÇó£¬ÔÚ»Ø¸´¿Í»§¶Ë´íÎóÏûÏ¢ºóÖ±½Ó¹Ø±ÕÁ´½Ó¡£
 
         /* Determine request type when unknown. */
-        if (!c->reqtype) {//Èç¹ûreqtype=0 ÄÇÃ´¿´ÏÂÕâ¸ö¿Í»§¶Ë·¢µÄÊÇÄÄÖÖÇëÇó
-            if (c->querybuf[0] == '*') {
+        if (!c->reqtype) {//Èç¹ûreqtype=0 ÄÇÃ´¿´ÏÂÕâ¸ö¿Í»§¶Ë·¢µÄÊÇÄÄÖÖÇëÇó   Èç¹ûc->reqtypeÎª0£¬ËµÃ÷¸ÕÒª¿ªÊ¼´¦ÀíÒ»ÌõÇëÇó£¨µÚÒ»´Î´¦Àíc->querybufÖĞµÄÊı¾İ£¬»ò¸Õ´¦ÀíÍêÒ»ÌõÍêÕûµÄÃüÁîÇëÇó£©¡£
+            if (c->querybuf[0] == '*') {//¡£Èç¹ûÊı¾İc->querybufµÄÊ××Ö½ÚÎª'*'£¬ËµÃ÷¸ÃÇëÇó»á¿çÔ½¶àĞĞ£¨°üº¬¶à¸ö¡±\r\n¡±£©£¬ÔòÖÃc->reqtypeÎªEDIS_REQ_MULTIBULK£»
                 c->reqtype = REDIS_REQ_MULTIBULK;
             } else {
-                c->reqtype = REDIS_REQ_INLINE;
+                c->reqtype = REDIS_REQ_INLINE;//·ñÔòËµÃ÷¸ÃÇëÇóÎªµ¥ĞĞÇëÇó£¬ÖÃc->reqtypeÎªREDIS_REQ_INLINE£»
             }
         }
 		//Ö»ÓĞbufferÖĞ°üº¬Ò»¸öÍêÕûÇëÇóÊ±£¬ÕâÁ½¸öº¯Êı²Å»á½âÎö³É¹¦·µ»ØREDIS_OK£¬½ÓÏÂÀ´»á´¦ÀíÃüÁî¡£·ñÔò£¬»áÌø³öÍâ²¿µÄwhileÑ­»·£¬µÈ´ıÏÂÒ»´ÎÊÂ¼şÑ­»·ÔÙ´Ósocket¶ÁÈ¡Ê£ÓàµÄÊı¾İ£¬ÔÙ½øĞĞ½âÎö¡£
         if (c->reqtype == REDIS_REQ_INLINE) {
-            if (processInlineBuffer(c) != REDIS_OK) break;
+            if (processInlineBuffer(c) != REDIS_OK) break;//Èç¹ûÕâÁ½¸öº¯Êı·µ»ØÎªREDIS_OK£¬ÔòËµÃ÷ÒÑ¾­ÊÕµ½²¢½âÎöºÃÁËÒ»ÌõÍêÕûµÄÇëÇó£¬ÃüÁîµÄ²ÎÊıÒÑ¾­·Ö½âµ½Êı×éc->argvÖĞ£¬c->argc±íÊ¾²ÎÊı¸öÊı¡£
         } else if (c->reqtype == REDIS_REQ_MULTIBULK) {
-            if (processMultibulkBuffer(c) != REDIS_OK) break;
+            if (processMultibulkBuffer(c) != REDIS_OK) break;//·µ»ØÖµÈç¹û²»ÊÇREDIS_OK£¬ÔòËµÃ÷ÉĞÎ´ÊÕµ½Ò»ÌõÍêÕûµÄÇëÇó£¬ĞèÒªÍË³öÑ­»·£¬º¯Êı·µ»Øºó½Ó×Å¶ÁÈ¡Ê£ÓàµÄÊı¾İ£»
         } else {
             redisPanic("Unknown request type");
         }
 
         /* Multibulk processing could see a <= 0 length. */
-        if (c->argc == 0) {
+        if (c->argc == 0) {// Èç¹ûc->argcÎª0£¬ÔòÎŞĞè´¦Àí£¬Ö±½Óµ÷ÓÃresetClientÖØÖÃ¿Í»§¶Ë×´Ì¬
             resetClient(c);
         } else {
             /* Only reset the client when the command was executed. */
-            if (processCommand(c) == REDIS_OK)//´¦ÀíÃüÁî
-                resetClient(c);
+            if (processCommand(c) == REDIS_OK)//´¦ÀíÃüÁî  Èç¹ûc->argc·Ç0£¬Ôòµ÷ÓÃprocessCommand´¦Àí¸ÃÃüÁî£¬µ÷ÓÃÏàÓ¦µÄÃüÁî´¦Àíº¯Êı¡£
+                resetClient(c);//´¦Àí³É¹¦ºó£¬µ÷ÓÃresetClientÖØÖÃ¿Í»§¶Ë×´Ì¬¡£È»ºó½Ó×Å´¦Àíc->querybufÖĞÊ£ÏÂµÄÄÚÈİ¡£
         }
     }
 }
