@@ -164,14 +164,14 @@ redisClient *createClient(int fd) {//´´½¨Ò»¸ö¿Í»§¶Ë
 int prepareClientToWrite(redisClient *c) {
     /* If it's the Lua client we always return ok without installing any
      * handler since there is no socket at all. */
-    if (c->flags & REDIS_LUA_CLIENT) return REDIS_OK;
+    if (c->flags & REDIS_LUA_CLIENT) return REDIS_OK;//Èç¹ûµ±Ç°¿Í»§¶ËÊÇLua¿Í»§¶Ë£¬Ö±½Ó·µ»ØREDIS_OK£¬¶øÎÞÐè×¢²ásocketÃèÊö·ûÉÏµÄ¿ÉÐ´ÊÂ¼þ£¬ÒòÎª¸ù±¾Ã»ÓÐsocketÃèÊö·û£»
 
     /* Masters don't receive replies, unless REDIS_MASTER_FORCE_REPLY flag
      * is set. */
     if ((c->flags & REDIS_MASTER) &&
-        !(c->flags & REDIS_MASTER_FORCE_REPLY)) return REDIS_ERR;
+        !(c->flags & REDIS_MASTER_FORCE_REPLY)) return REDIS_ERR;// Èç¹û¿Í»§¶ËÎªMaster½Úµã£¬³ý·ÇÉèÖÃREDIS_MASTER_FORCE_REPLY±êÖ¾£¬·ñÔòÕâÖÖ¿Í»§¶Ë²»½ÓÊÕ»Ø¸´£¬Òò´ËÖ±½Ó·µ»ØREDIS_ERR£»
 
-    if (c->fd <= 0) return REDIS_ERR; /* Fake client for AOF loading. */
+    if (c->fd <= 0) return REDIS_ERR; /* Fake client for AOF loading. Èç¹û¿Í»§¶ËµÄsocketÃèÊö·ûÐ¡ÓÚµÈÓÚ0£¬ËµÃ÷ÊÇ¼ÓÔØAOFÎÄ¼þÊ±µÄÎ±¿Í»§¶Ë£¬Ö±½Ó·µ»ØREDIS_ERR£» */
 
     /* Only install the handler if not already installed and, in case of
      * slaves, if the client can actually receive writes. */
@@ -995,7 +995,7 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
          * However if we are over the maxmemory limit we ignore that and
          * just deliver as much data as it is possible to deliver. */
         server.stat_net_output_bytes += totwritten;
-        if (totwritten > REDIS_MAX_WRITE_PER_EVENT &&
+        if (totwritten > REDIS_MAX_WRITE_PER_EVENT &&//Òò±¾º¯ÊýÊÇ¿ÉÐ´ÊÂ¼þµÄ»Øµ÷º¯Êý£¬ÎªÁË±ÜÃâ¸Ãº¯ÊýÖ´ÐÐÊ±¼ä¹ý³¤£¬¶øÓ°ÏìÆäËûÊÂ¼þµÄ´¦Àí¡£Òò´ËÕâÀïÏÞÖÆ¸Ãº¯Êý×î´ó·¢ËÍµÄ×Ö½ÚÊýÎªREDIS_MAX_WRITE_PER_EVENT(64k)
             (server.maxmemory == 0 ||
              zmalloc_used_memory() < server.maxmemory)) break;
     }
@@ -1134,7 +1134,7 @@ int processMultibulkBuffer(redisClient *c) {//¶ÔÓÚset a 1ÕâÌõÃüÁî£¬server¶ËÊÕµ½µ
         }
 
         /* Buffer should also contain \n */
-        if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))//Èç¹ûµÚÒ»¸ö\rÖ®Ç°Êý¾Ý²¿·ÖµÄ³¤¶È´óÓÚÕû¸ö¶ÁÈ¡ÄÚÈÝ³¤¶È¼õ2£¬¾Í·µ»Ø´íÎó
+        if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))//Èç¹ûµÚÒ»¸ö\rÖ®Ç°Êý¾Ý²¿·ÖµÄ³¤¶È´óÓÚÕû¸ö¶ÁÈ¡ÄÚÈÝ³¤¶È¼õ2£¬¾Í·µ»Ø´íÎó ÆäÊµÊÇÈ±ÉÙ\n
             return REDIS_ERR;
 
         /* We know for sure there is a whole line since newline != NULL,
@@ -1176,21 +1176,21 @@ int processMultibulkBuffer(redisClient *c) {//¶ÔÓÚset a 1ÕâÌõÃüÁî£¬server¶ËÊÕµ½µ
             }
 
             /* Buffer should also contain \n */
-            if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))//¼ì²éºÏ·¨ÐÔ
+            if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))//Èç¹ûµÚÒ»¸ö\rÖ®Ç°Êý¾Ý²¿·ÖµÄ³¤¶È´óÓÚÕû¸ö¶ÁÈ¡ÄÚÈÝ³¤¶È¼õ2£¬¾Í·µ»Ø´íÎó ÆäÊµÊÇÈ±ÉÙ\n
                 break;
 
-            if (c->querybuf[pos] != '$') {//Èç¹ûÕâÒ»ÐÐµÄµÚÒ»¸ö²»ÊÇ$·û£¬ÄÇÃ´ËµÃ÷ÊÇ·Ç·¨Öµ
+            if (c->querybuf[pos] != '$') {//Èç¹ûÕâÒ»ÐÐµÄµÚÒ»¸ö²»ÊÇ$·û£¬ÄÇÃ´ËµÃ÷ÊÇ·Ç·¨Öµ,Ð­Òé³ö´í
                 addReplyErrorFormat(c,
                     "Protocol error: expected '$', got '%c'",
                     c->querybuf[pos]);
-                setProtocolError(c,pos);
+                setProtocolError(c,pos);//²¢ÇÒµ÷ÓÃsetProtocolErrorÎª¿Í»§¶Ë±êÖ¾Î»c->flagsÔö¼ÓREDIS_CLOSE_AFTER_REPLY±ê¼Ç£¬·µ»ØREDIS_ERR£»  Ð­Òé´íÎó
                 return REDIS_ERR;
             }
 
             ok = string2ll(c->querybuf+pos+1,newline-(c->querybuf+pos+1),&ll); /* ½âÎö'$'ºóÃæ¸úµÄÊý×Ö£¬±íÊ¾ºó½ÓµÄ²ÎÊý(×Ö·û´®±íÊ¾)µÄ³¤¶È */
-            if (!ok || ll < 0 || ll > 512*1024*1024) {
+            if (!ok || ll < 0 || ll > 512*1024*1024) {//ÏÂÒ»ÐÐÖÐ°üº¬µÄ×Ö·û´®³¤¶È´æ´¢ÔÚllÖÐ£¬ll×î´óÎª512M£¬·ñÔò·´À¡¸ø¿Í»§¶Ë´íÎóÐÅÏ¢£º"Protocol error: invalid bulk length"
                 addReplyError(c,"Protocol error: invalid bulk length");
-                setProtocolError(c,pos);
+                setProtocolError(c,pos);//²¢ÇÒµ÷ÓÃsetProtocolErrorÎª¿Í»§¶Ë±êÖ¾Î»c->flagsÔö¼ÓREDIS_CLOSE_AFTER_REPLY±ê¼Ç£¬·µ»ØREDIS_ERR£»  Ð­Òé´íÎó
                 return REDIS_ERR;
             }
 
@@ -1223,7 +1223,7 @@ int processMultibulkBuffer(redisClient *c) {//¶ÔÓÚset a 1ÕâÌõÃüÁî£¬server¶ËÊÕµ½µ
              * just use the current sds string. */
             if (pos == 0 &&
                 c->bulklen >= REDIS_MBULK_BIG_ARG &&
-                (signed) sdslen(c->querybuf) == c->bulklen+2)
+                (signed) sdslen(c->querybuf) == c->bulklen+2)// ËµÃ÷£¬µ±Ç°c->querybufÖÐ£¬²»¶à²»ÉÙÕýºÃ°üº¬µÄÊÇÒ»¸ö´óÓÚ32kµÄ´ó×Ö·û´®ÐÐ£¬ÕâÖÖÇé¿öÏÂ£¬ÎªÁË±ÜÃâ¿½±´´ó¿éÄÚ´æ£¬Ö±½ÓÊ¹ÓÃc->querybuf´´½¨×Ö·û´®¶ÔÏó£¬²¢´æ´¢µ½c->argvÖÐ£»
             {
                 c->argv[c->argc++] = createObject(REDIS_STRING,c->querybuf);    /* createObjectÊÇÖ±½ÓÊ¹ÓÃÁËquerybuf±íÊ¾µÄ¿Õ¼ä£¬ËùÒÔÏÂÃæÐèÒªÔÙ´´Ôì³öÁíÒ»¸öÏàÍ¬³¤¶ÈµÄ¿ÕµÄbuffer */
                 sdsIncrLen(c->querybuf,-2); /* remove CRLF */
@@ -1232,7 +1232,7 @@ int processMultibulkBuffer(redisClient *c) {//¶ÔÓÚset a 1ÕâÌõÃüÁî£¬server¶ËÊÕµ½µ
                  * likely... */
                 c->querybuf = sdsMakeRoomFor(c->querybuf,c->bulklen+2);
                 pos = 0;
-            } else {
+            } else {//´´½¨×Ö·û´®¶ÔÏó£¬½«c->querybuf+posµÄÄÚÈÝ¸´ÖÆµ½¸Ã×Ö·û´®¶ÔÏóÖÐ£»
                 c->argv[c->argc++] =
                     createStringObject(c->querybuf+pos,c->bulklen);
                 pos += (int)c->bulklen+2;                                       WIN_PORT_FIX /* cast (int) */
