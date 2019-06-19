@@ -157,7 +157,7 @@ static const rio rioFileIO = {
 };
 
 void rioInitWithFile(rio *r, FILE *fp) {
-    *r = rioFileIO;//读写函数
+    *r = rioFileIO;//读写函数函数指针列表
     r->io.file.fp = fp;
     r->io.file.buffered = 0;
     r->io.file.autosync = 0;

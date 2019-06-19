@@ -873,9 +873,9 @@ struct redisServer {
     int get_ack_from_slaves;            /* If true we send REPLCONF GETACK. */
     /* Limits */
     unsigned int maxclients;            /* Max number of simultaneous clients */
-    PORT_ULONGLONG maxmemory;   /* Max number of memory bytes to use */
-    int maxmemory_policy;           /* Policy for key eviction */
-    int maxmemory_samples;          /* Pricision of random sampling */
+    PORT_ULONGLONG maxmemory;   /* Max number of memory bytes to use 该参数即为缓存数据占用的内存限制. 当缓存的数据消耗的内存超过这个数值限制时, 将触发数据淘汰. 该数据配置为0时,表示缓存的数据量没有限制, 即LRU功能不生效*/
+    int maxmemory_policy;           /* Policy for key eviction 淘汰策略. 定义参与淘汰的数据的类型和属性 */
+    int maxmemory_samples;          /* Pricision of random sampling 随机采样的精度. 该数值配置越大, 越接近于真实的LRU算法,但是数值越大, 消耗的CPU计算时间越多,执行效率越低.*/
     /* Blocked clients */
     unsigned int bpop_blocked_clients; /* Number of clients blocked by lists */
     list *unblocked_clients; /* list of clients to unblock before next loop */

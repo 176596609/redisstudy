@@ -763,7 +763,7 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, PORT_LONGLONG now) {
  * executed, where the time limit is a percentage of the REDIS_HZ period
  * as specified by the REDIS_EXPIRELOOKUPS_TIME_PERC define. */
 
-void activeExpireCycle(int type) {//删除过期键
+void activeExpireCycle(int type) {//删除过期键  所谓的LRU其实就在这里  redis的LRU其实和传统意义上的LRU不一样
     /* This function has some global state in order to continue the work
      * incrementally across calls. */
     static unsigned int current_db = 0; /* Last DB tested. */

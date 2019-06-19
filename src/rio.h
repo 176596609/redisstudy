@@ -55,7 +55,7 @@ struct _rio {
     void (*update_cksum)(struct _rio *, const void *buf, size_t len);
 
     /* The current checksum */
-    uint64_t cksum;
+    uint64_t cksum;//CRC64校验码
 
     /* number of bytes read or written */
     size_t processed_bytes;//记录读写了多少byte

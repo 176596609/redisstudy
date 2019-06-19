@@ -76,7 +76,7 @@ time_t rdbLoadTime(rio *rdb) {//读取四个字节长的时间进来 s
 
 int rdbSaveMillisecondTime(rio *rdb, PORT_LONGLONG t) {
     int64_t t64 = (int64_t) t;
-    return rdbWriteRaw(rdb,&t64,8);
+    return rdbWriteRaw(rdb,&t64,8);//写入八个字节的时间
 }
 
 PORT_LONGLONG rdbLoadMillisecondTime(rio *rdb) {//读取8个字节长的时间进来 ms
@@ -147,19 +147,19 @@ uint32_t rdbLoadLen(rio *rdb, int *isencoded) {//读取下一步要读取的长度  isencod
  * for encoded types. If the function successfully encodes the integer, the
  * representation is stored in the buffer pointer to by "enc" and the string
  * length is returned. Otherwise 0 is returned. */
-int rdbEncodeInteger(PORT_LONGLONG value, unsigned char *enc) {
-    if (value >= -(1<<7) && value <= (1<<7)-1) {
-        enc[0] = (REDIS_RDB_ENCVAL<<6)|REDIS_RDB_ENC_INT8;
-        enc[1] = value&0xFF;
+int rdbEncodeInteger(PORT_LONGLONG value, unsigned char *enc) {// 将longlong类型的value编码成一个整数编码，如果可以编码，将编码后的值保存在enc中，返回编码后的字节数
+    if (value >= -(1<<7) && value <= (1<<7)-1) {// -2^7 <= value <= 2^7-1
+        enc[0] = (REDIS_RDB_ENCVAL<<6)|REDIS_RDB_ENC_INT8;// // 最高两位设置为 11，表示是一个编码过的值，低6位为 000000 ，表示是 RDB_ENC_INT8 编码格式
+        enc[1] = value&0xFF;// 剩下的1个字节保存value，返回编码了2字节
         return 2;
-    } else if (value >= -(1<<15) && value <= (1<<15)-1) {
-        enc[0] = (REDIS_RDB_ENCVAL<<6)|REDIS_RDB_ENC_INT16;
-        enc[1] = value&0xFF;
+    } else if (value >= -(1<<15) && value <= (1<<15)-1) {// -2^15 <= value <= 2^15-1
+        enc[0] = (REDIS_RDB_ENCVAL<<6)|REDIS_RDB_ENC_INT16;// 最高两位设置为 11，表示是一个编码过的值，低6位为 000001 ，表示是 RDB_ENC_INT16 编码格式
+        enc[1] = value&0xFF;// 剩下的2个字节保存value，返回编码了3字节
         enc[2] = (value>>8)&0xFF;
         return 3;
-    } else if (value >= -((PORT_LONGLONG)1<<31) && value <= ((PORT_LONGLONG)1<<31)-1) {
-        enc[0] = (REDIS_RDB_ENCVAL<<6)|REDIS_RDB_ENC_INT32;
-        enc[1] = value&0xFF;
+    } else if (value >= -((PORT_LONGLONG)1<<31) && value <= ((PORT_LONGLONG)1<<31)-1) { // -2^31 <= value <= 2^31-1
+        enc[0] = (REDIS_RDB_ENCVAL<<6)|REDIS_RDB_ENC_INT32;//最高两位设置为 11，表示是一个编码过的值，低6位为 000010 ，表示是 RDB_ENC_INT32 编码格式
+        enc[1] = value&0xFF;//// 剩下的4个字节保存value，返回编码了5字节
         enc[2] = (value>>8)&0xFF;
         enc[3] = (value>>16)&0xFF;
         enc[4] = (value>>24)&0xFF;
@@ -172,7 +172,7 @@ int rdbEncodeInteger(PORT_LONGLONG value, unsigned char *enc) {
 /* Loads an integer-encoded object with the specified encoding type "enctype".
  * If the "encode" argument is set the function may return an integer-encoded
  * string object, otherwise it always returns a raw string object. */
-robj *rdbLoadIntegerObject(rio *rdb, int enctype, int encode) {
+robj *rdbLoadIntegerObject(rio *rdb, int enctype, int encode) {//rdbEncodeInteger的反过来
     unsigned char enc[4];
     PORT_LONGLONG val;
 
@@ -637,17 +637,17 @@ int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val,
                         PORT_LONGLONG expiretime, PORT_LONGLONG now)
 {
     /* Save the expire time */
-    if (expiretime != -1) {
+    if (expiretime != -1) {//如果有超时时间
         /* If this key is already expired skip it */
-        if (expiretime < now) return 0;
-        if (rdbSaveType(rdb,REDIS_RDB_OPCODE_EXPIRETIME_MS) == -1) return -1;
-        if (rdbSaveMillisecondTime(rdb,expiretime) == -1) return -1;
+        if (expiretime < now) return 0;//如果这个键已经超时，那么直接退出
+        if (rdbSaveType(rdb,REDIS_RDB_OPCODE_EXPIRETIME_MS) == -1) return -1;//写入常量 252表示超时
+        if (rdbSaveMillisecondTime(rdb,expiretime) == -1) return -1;//写入超时时间
     }
 
     /* Save type, key, value */
-    if (rdbSaveObjectType(rdb,val) == -1) return -1;
-    if (rdbSaveStringObject(rdb,key) == -1) return -1;
-    if (rdbSaveObject(rdb,val) == -1) return -1;
+    if (rdbSaveObjectType(rdb,val) == -1) return -1;//写入对象类型
+    if (rdbSaveStringObject(rdb,key) == -1) return -1;//写入key
+    if (rdbSaveObject(rdb,val) == -1) return -1;//写入值
     return 1;
 }
 
@@ -659,7 +659,7 @@ int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val,
  * When the function returns REDIS_ERR and if 'error' is not NULL, the
  * integer pointed by 'error' is set to the value of errno just after the I/O
  * error. */
-int rdbSaveRio(rio *rdb, int *error) {
+int rdbSaveRio(rio *rdb, int *error) {//保存RDB数据库
     dictIterator *di = NULL;
     dictEntry *de;
     char magic[10];
@@ -669,28 +669,28 @@ int rdbSaveRio(rio *rdb, int *error) {
 
     if (server.rdb_checksum)
         rdb->update_cksum = rioGenericUpdateChecksum;
-    snprintf(magic,sizeof(magic),"REDIS%04d",REDIS_RDB_VERSION);
-    if (rdbWriteRaw(rdb,magic,9) == -1) goto werr;
+    snprintf(magic,sizeof(magic),"REDIS%04d",REDIS_RDB_VERSION);//第六个版本的RDB数据库
+    if (rdbWriteRaw(rdb,magic,9) == -1) goto werr;//写入九个字节的数据
 
-    for (j = 0; j < server.dbnum; j++) {
+    for (j = 0; j < server.dbnum; j++) {//逐个遍历数据库
         redisDb *db = server.db+j;
         dict *d = db->dict;
-        if (dictSize(d) == 0) continue;
-        di = dictGetSafeIterator(d);
+        if (dictSize(d) == 0) continue;//数据库为空 continue
+        di = dictGetSafeIterator(d);//获取哈希表的迭代器
         if (!di) return REDIS_ERR;
 
         /* Write the SELECT DB opcode */
-        if (rdbSaveType(rdb,REDIS_RDB_OPCODE_SELECTDB) == -1) goto werr;
+        if (rdbSaveType(rdb,REDIS_RDB_OPCODE_SELECTDB) == -1) goto werr;//写入切换数据库指令 切换到j数据库
         if (rdbSaveLen(rdb,j) == -1) goto werr;
 
         /* Iterate this DB writing every entry */
         while((de = dictNext(di)) != NULL) {
-            sds keystr = dictGetKey(de);
-            robj key, *o = dictGetVal(de);
+            sds keystr = dictGetKey(de);//获取键
+            robj key, *o = dictGetVal(de);//获取值
             PORT_LONGLONG expire;
 
-            initStaticStringObject(key,keystr);
-            expire = getExpire(db,&key);
+            initStaticStringObject(key,keystr);//sds的key转化为 object
+            expire = getExpire(db,&key);//获取键对应的超时时间
             if (rdbSaveKeyValuePair(rdb,&key,o,expire,now) == -1) goto werr;
         }
         dictReleaseIterator(di);
@@ -740,14 +740,14 @@ werr: /* Write error. */
 }
 
 /* Save the DB on disk. Return REDIS_ERR on error, REDIS_OK on success. */
-int rdbSave(char *filename) {
+int rdbSave(char *filename) {//保存RDB文件
     char tmpfile[256];
     FILE *fp;
     rio rdb;
     int error;
 
     snprintf(tmpfile,256,"temp-%d.rdb", (int) getpid());
-    fp = fopen(tmpfile,IF_WIN32("wb","w"));
+    fp = fopen(tmpfile,IF_WIN32("wb","w"));//打开文件描述符
     if (!fp) {
         redisLog(REDIS_WARNING, "Failed opening .rdb for saving: %s",
             strerror(errno));

@@ -801,12 +801,12 @@ PORT_LONGLONG getExpire(redisDb *db, robj *key) {
 
     /* No expire? return ASAP */
     if (dictSize(db->expires) == 0 ||
-       (de = dictFind(db->expires,key->ptr)) == NULL) return -1;
+       (de = dictFind(db->expires,key->ptr)) == NULL) return -1;//永不超时
 
     /* The entry was found in the expire dict, this means it should also
      * be present in the main dict (safety check). */
     redisAssertWithInfo(NULL,key,dictFind(db->dict,key->ptr) != NULL);
-    return dictGetSignedIntegerVal(de);
+    return dictGetSignedIntegerVal(de);//超时时间获取
 }
 
 /* Propagate expires into slaves and the AOF file.
