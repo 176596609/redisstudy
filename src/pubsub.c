@@ -55,7 +55,7 @@ int clientSubscriptionsCount(redisClient *c) {
 
 /* Subscribe a client to a channel. Returns 1 if the operation succeeded, or
  * 0 if the client was already subscribed to that channel. */
-int pubsubSubscribeChannel(redisClient *c, robj *channel) {
+int pubsubSubscribeChannel(redisClient *c, robj *channel) {//客户端订阅一个消息
     dictEntry *de;
     list *clients = NULL;
     int retval = 0;
@@ -274,7 +274,7 @@ int pubsubPublishMessage(robj *channel, robj *message) {
  * Pubsub commands implementation
  *----------------------------------------------------------------------------*/
 
-void subscribeCommand(redisClient *c) {
+void subscribeCommand(redisClient *c) {//客户端订阅频道
     int j;
 
     for (j = 1; j < c->argc; j++)
@@ -282,7 +282,7 @@ void subscribeCommand(redisClient *c) {
     c->flags |= REDIS_PUBSUB;
 }
 
-void unsubscribeCommand(redisClient *c) {
+void unsubscribeCommand(redisClient *c) {//客户端解除订阅频道
     if (c->argc == 1) {
         pubsubUnsubscribeAllChannels(c,1);
     } else {
